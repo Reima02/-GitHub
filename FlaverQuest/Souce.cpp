@@ -9,12 +9,23 @@
 #define GAME_WINDOW_BAR	0	//タイトルバーはデフォルトにする
 #define GAME_WINDOW_NAME	"Flavor Quest"	//ウィンドウのタイトル
 
+#define ERR -1			//-1をエラー
+
 //FPS設定
 #define GAME_FPS			60	//FPSの数値	
 
 //パスの長さ
 #define PATH_MAX			255	//255文字まで
 #define NAME_MAX			255	//255文字まで
+
+//画像
+#define IMAGE_LOAD_ERR_TITLE	TEXT("画像読み込みエラー")		//画像読み込みエラーメッセージ
+#define IMAGE_TITLE_BK_PATH		TEXT(".\\IMAGE\\TitleBack.png") //タイトル背景のパス
+#define IMAGE_TITLE_ROGO_PATH	TEXT(".\\IMAGE\\titlerogo.png")	//タイトルロゴのパス
+
+//音楽
+#define MUSIC_LOAD_ERR_TITLE	TEXT("音楽読み込みエラー")		//音楽読み込みエラーメッセージ
+#define MUSIC_START_PATH		TEXT(".\\MUSIC\\start.mp3")		//タイトルBGM
 
 /*----------プロトタイプ宣言----------*/
 //スタート画面
@@ -109,6 +120,13 @@ int CountFps;							//カウンタ
 float CalcFps;							//計算結果
 int SampleNumFps = GAME_FPS;		//平均を取るサンプル数
 
+//画像
+IMAGE ImageTitleBK;					//タイトル背景
+IMAGE_ROTA ImageTitleRogo;			//タイトルロゴ
+
+//音楽
+MUSIC musicStart;		//スタート画面の音楽
+
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -125,6 +143,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	int DrawY = 0;	//表示位置Y
 
 	SetDrawScreen(DX_SCREEN_BACK);	//Draw系関数は裏画面に描画
+
+	//画像読み込み
+	if (MY_LOAD_IMAGE() == FALSE) { return -1; }
+
+	//音楽読み込み
+	if (MY_LOAD_MUSIC() == FALSE) { return -1; }
+
+	GameScene = GAME_SCENE_START;//最初はスタート画面から
 
 	//無限ループ
 	while (TRUE)
@@ -178,9 +204,18 @@ VOID MY_START(VOID)
 //スタート画面の処理
 VOID MY_START_PROC(VOID)
 {
+	//BGM再生
+	if (CheckSoundMem(musicStart.handle) == 0) {					//正しく読み取れていたら
+		ChangeVolumeSoundMem(255 * 50 / 100, musicStart.handle);	//音量変更
+		PlaySoundMem(musicStart.handle, DX_PLAYTYPE_LOOP);			//再生
+	}
 	//エンターキーを押したら、プレイシーンへ移動する
 	if (MY_KEY_DOWN(KEY_INPUT_RETURN) == TRUE)
 	{
+		//BGM停止
+		if (CheckSoundMem(musicStart.handle) != 0) {
+			StopSoundMem(musicStart.handle);
+		}
 		GameScene = GAME_SCENE_PLAY;
 	}
 
@@ -191,7 +226,7 @@ VOID MY_START_PROC(VOID)
 VOID MY_START_DRAW(VOID)
 {
 	//赤の四角を描画
-	DrawBox(10, 10, GAME_WIDTH - 10, GAME_HEIGHT - 10, GetColor(255, 0, 0), TRUE);
+	DrawGraph(0, 0, ImageTitleBK.handle, TRUE);
 
 	DrawString(0, 0, "スタート画面", GetColor(255, 255, 255));
 	return;
@@ -370,18 +405,45 @@ BOOL MY_KEYDOWN_KEEP(int KEY_INPUT_, int DownTime)
 
 /*----------画像読み込み処理----------*/
 BOOL MY_LOAD_IMAGE(VOID) {
+	strcpy_s(ImageTitleBK.path, IMAGE_TITLE_BK_PATH);
+	ImageTitleBK.handle = LoadGraph(ImageTitleBK.path);
+	if (ImageTitleBK.handle == ERR) {
+		MessageBox(GetMainWindowHandle(), IMAGE_TITLE_BK_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
+		return FALSE;
+	}
+	GetGraphSize(ImageTitleBK.handle, &ImageTitleBK.width, &ImageTitleBK.height);	//画像の幅と高さを取得
+	ImageTitleBK.x = GAME_WIDTH / 2 - ImageTitleBK.x / 2;
+	ImageTitleBK.y = GAME_HEIGHT / 2 - ImageTitleBK.y / 2;
+
+	strcpy_s(ImageTitleRogo.image.path, IMAGE_TITLE_ROGO_PATH);
+	ImageTitleRogo.image.handle = LoadGraph(ImageTitleRogo.image.path);
+	if (ImageTitleRogo.image.handle == ERR) {
+		MessageBox(GetMainWindowHandle(), IMAGE_TITLE_ROGO_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
+		return FALSE;
+	}
+	ImageTitleRogo.image.x = GAME_WIDTH / 2 - ImageTitleRogo.image.x / 2;
+	ImageTitleRogo.image.y = GAME_HEIGHT / 2 - ImageTitleRogo.image.y / 2;
+
 	return TRUE;
 }
 
 VOID MY_DELETE_IMAGE(VOID) {
-
+	DeleteGraph(ImageTitleBK.handle);
 }
 
 /*----------音楽読み込み処理----------*/
 BOOL MY_LOAD_MUSIC(VOID) {
+	//スタート画面のBGM
+	strcpy_s(musicStart.path, MUSIC_START_PATH);
+	musicStart.handle = LoadSoundMem(musicStart.path);
+	if (musicStart.handle == ERR) {
+		MessageBox(GetMainWindowHandle(), MUSIC_START_PATH,MUSIC_LOAD_ERR_TITLE , MB_OK);
+		return FALSE;
+	}
+
 	return TRUE;
 }
 
 VOID MY_DELETE_MUSIC(VOID) {
-
+	DeleteSoundMem(musicStart.handle);
 }
