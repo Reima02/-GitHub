@@ -22,6 +22,7 @@
 #define IMAGE_LOAD_ERR_TITLE	TEXT("画像読み込みエラー")		//画像読み込みエラーメッセージ
 #define IMAGE_TITLE_BK_PATH		TEXT(".\\IMAGE\\TitleBack.png") //タイトル背景のパス
 #define IMAGE_TITLE_ROGO_PATH	TEXT(".\\IMAGE\\titlerogo.png")	//タイトルロゴのパス
+#define	IMAGE_TITLE_ROGO_ROTA	0.23		//タイトルロゴ拡大率
 
 //音楽
 #define MUSIC_LOAD_ERR_TITLE	TEXT("音楽読み込みエラー")		//音楽読み込みエラーメッセージ
@@ -225,8 +226,18 @@ VOID MY_START_PROC(VOID)
 //スタート画面の描画
 VOID MY_START_DRAW(VOID)
 {
-	//赤の四角を描画
+	//背景
 	DrawGraph(0, 0, ImageTitleBK.handle, TRUE);
+
+	//ロゴ
+	DrawRotaGraph(
+		ImageTitleRogo.image.x,
+		ImageTitleRogo.image.y,
+		ImageTitleRogo.rate,
+		ImageTitleRogo.angle,
+		ImageTitleRogo.image.handle,
+		TRUE
+	);
 
 	DrawString(0, 0, "スタート画面", GetColor(255, 255, 255));
 	return;
@@ -422,7 +433,9 @@ BOOL MY_LOAD_IMAGE(VOID) {
 		return FALSE;
 	}
 	ImageTitleRogo.image.x = GAME_WIDTH / 2 - ImageTitleRogo.image.x / 2;
-	ImageTitleRogo.image.y = GAME_HEIGHT / 2 - ImageTitleRogo.image.y / 2;
+	ImageTitleRogo.image.y = GAME_HEIGHT / 2.5;
+	ImageTitleRogo.angle = 0;
+	ImageTitleRogo.rate = IMAGE_TITLE_ROGO_ROTA;
 
 	return TRUE;
 }
