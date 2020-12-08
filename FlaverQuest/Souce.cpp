@@ -22,8 +22,9 @@
 #define IMAGE_LOAD_ERR_TITLE	TEXT("画像読み込みエラー")		//画像読み込みエラーメッセージ
 #define IMAGE_TITLE_BK_PATH		TEXT(".\\IMAGE\\TitleBack.png") //タイトル背景のパス
 #define IMAGE_TITLE_ROGO_PATH	TEXT(".\\IMAGE\\titlerogo.png")	//タイトルロゴのパス
-#define	IMAGE_TITLE_ROGO_ROTA	0.23		//タイトルロゴ拡大率
-
+#define	IMAGE_TITLE_ROGO_ROTA	0.25		//タイトルロゴ拡大率
+#define IMAGE_TITLE_START_PATH		TEXT(".\\IMAGE\\title_start.png")	//タイトルスタートの画像
+#define IMAGE_TITLE_START_ROTA	1
 //音楽
 #define MUSIC_LOAD_ERR_TITLE	TEXT("音楽読み込みエラー")		//音楽読み込みエラーメッセージ
 #define MUSIC_START_PATH		TEXT(".\\MUSIC\\start.mp3")		//タイトルBGM
@@ -124,6 +125,7 @@ int SampleNumFps = GAME_FPS;		//平均を取るサンプル数
 //画像
 IMAGE ImageTitleBK;					//タイトル背景
 IMAGE_ROTA ImageTitleRogo;			//タイトルロゴ
+IMAGE_ROTA ImageTitleStart;			//タイトルスタートの画像
 
 //音楽
 MUSIC musicStart;		//スタート画面の音楽
@@ -238,6 +240,15 @@ VOID MY_START_DRAW(VOID)
 		ImageTitleRogo.image.handle,
 		TRUE
 	);
+
+	//スタート表示
+	DrawRotaGraph(
+		ImageTitleStart.image.x,
+		ImageTitleStart.image.y,
+		ImageTitleStart.rate,
+		ImageTitleStart.angle,
+		ImageTitleStart.image.handle,
+		TRUE);
 
 	DrawString(0, 0, "スタート画面", GetColor(255, 255, 255));
 	return;
@@ -437,11 +448,28 @@ BOOL MY_LOAD_IMAGE(VOID) {
 	ImageTitleRogo.angle = 0;
 	ImageTitleRogo.rate = IMAGE_TITLE_ROGO_ROTA;
 
+	//スタート表記
+	strcpy_s(ImageTitleStart.image.path, IMAGE_TITLE_START_PATH);			//パスの設定
+	ImageTitleStart.image.handle = LoadGraph(ImageTitleStart.image.path);			//読み込み
+	if (ImageTitleStart.image.handle == -1)
+	{
+		//エラーメッセージ表示
+		MessageBox(GetMainWindowHandle(), IMAGE_TITLE_START_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
+		return FALSE;
+	}
+	GetGraphSize(ImageTitleStart.image.handle, &ImageTitleStart.image.width, &ImageTitleStart.image.height);	//画像の幅と高さを取得
+	ImageTitleStart.image.x = GAME_WIDTH / 2 - ImageTitleStart.image.x / 2;		//左右中央揃え
+	ImageTitleStart.image.y = GAME_HEIGHT/1.2;		//上下中央揃え
+	ImageTitleStart.angle = 0;
+	ImageTitleStart.rate = IMAGE_TITLE_START_ROTA;
+
 	return TRUE;
 }
 
 VOID MY_DELETE_IMAGE(VOID) {
 	DeleteGraph(ImageTitleBK.handle);
+	DeleteGraph(ImageTitleRogo.image.handle);
+	DeleteGraph(ImageTitleStart.image.handle);
 }
 
 /*----------音楽読み込み処理----------*/
