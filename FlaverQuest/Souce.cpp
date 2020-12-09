@@ -28,7 +28,7 @@
 //音楽
 #define MUSIC_LOAD_ERR_TITLE	TEXT("音楽読み込みエラー")		//音楽読み込みエラーメッセージ
 #define MUSIC_START_PATH		TEXT(".\\MUSIC\\start.mp3")		//タイトルBGM
-
+#define MUSIC_PLAY_PATH			TEXT(".\\MUSIC\\play.mp3")		//プレイBGM
 /*----------プロトタイプ宣言----------*/
 //スタート画面
 VOID MY_START(VOID);		//スタート画面
@@ -129,7 +129,7 @@ IMAGE_ROTA ImageTitleStart;			//タイトルスタートの画像
 
 //音楽
 MUSIC musicStart;		//スタート画面の音楽
-
+MUSIC musicPlay;		//プレイ画面の音楽
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -262,9 +262,20 @@ VOID MY_PLAY(VOID) {
 
 VOID MY_PLAY_PROC(VOID)
 {
+	//BGM再生
+	if (CheckSoundMem(musicPlay.handle) == 0) {					//正しく読み取れていたら
+		ChangeVolumeSoundMem(255 * 50 / 100, musicPlay.handle);	//音量変更
+		PlaySoundMem(musicPlay.handle, DX_PLAYTYPE_LOOP);			//再生
+	}
+
 	//スペースキーを押したら、エンドシーンへ移動する
 	if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
 	{
+		//BGM停止
+		if (CheckSoundMem(musicPlay.handle) != 0) {
+			StopSoundMem(musicPlay.handle);
+		}
+
 		GameScene = GAME_SCENE_END;
 	}
 
@@ -482,9 +493,17 @@ BOOL MY_LOAD_MUSIC(VOID) {
 		return FALSE;
 	}
 
+	strcpy_s(musicPlay.path, MUSIC_PLAY_PATH);
+	musicPlay.handle = LoadSoundMem(musicPlay.path);
+	if (musicPlay.handle == ERR) {
+		MessageBox(GetMainWindowHandle(), MUSIC_PLAY_PATH, MUSIC_LOAD_ERR_TITLE, MB_OK);
+		return FALSE;
+	}
+
 	return TRUE;
 }
 
 VOID MY_DELETE_MUSIC(VOID) {
 	DeleteSoundMem(musicStart.handle);
+	DeleteSoundMem(musicPlay.handle);
 }
