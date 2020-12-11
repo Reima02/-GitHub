@@ -1,221 +1,236 @@
-/*----------ƒwƒbƒ_[ƒtƒ@ƒCƒ‹----------*/
+ï»¿/*----------ãƒ˜ãƒƒãƒ€ãƒ¼ãƒ•ã‚¡ã‚¤ãƒ«----------*/
 #include "DxLib.h"
 
-/*----------ƒ}ƒNƒ’è‹`----------*/
-#define GAME_WIDTH	1024	//‰æ–Ê‚Ì‰¡‚Ì‘å‚«‚³
-#define GAME_HEIGHT	576	//‰æ–Ê‚Ìc‚Ì‘å‚«‚³
-#define GAME_COLOR	32	//‰æ–Ê‚ÌƒJƒ‰[ƒrƒbƒg
+/*----------ãƒã‚¯ãƒ­å®šç¾©----------*/
+#define GAME_WIDTH	1024	//ç”»é¢ã®æ¨ªã®å¤§ãã•
+#define GAME_HEIGHT	576	//ç”»é¢ã®ç¸¦ã®å¤§ãã•
+#define GAME_COLOR	32	//ç”»é¢ã®ã‚«ãƒ©ãƒ¼ãƒ“ãƒƒãƒˆ
 
-#define GAME_WINDOW_BAR	0	//ƒ^ƒCƒgƒ‹ƒo[‚ÍƒfƒtƒHƒ‹ƒg‚É‚·‚é
-#define GAME_WINDOW_NAME	"Flavor Quest"	//ƒEƒBƒ“ƒhƒE‚Ìƒ^ƒCƒgƒ‹
+#define GAME_WINDOW_BAR	0	//ã‚¿ã‚¤ãƒˆãƒ«ãƒãƒ¼ã¯ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã«ã™ã‚‹
+#define GAME_WINDOW_NAME	"Flavor Quest"	//ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ã‚¿ã‚¤ãƒˆãƒ«
 
-#define ERR -1			//-1‚ğƒGƒ‰[
+#define ERR -1			//-1ã‚’ã‚¨ãƒ©ãƒ¼
 
-//FPSİ’è
-#define GAME_FPS			60	//FPS‚Ì”’l	
+//FPSè¨­å®š
+#define GAME_FPS			60	//FPSã®æ•°å€¤	
 
-//ƒpƒX‚Ì’·‚³
-#define PATH_MAX			255	//255•¶š‚Ü‚Å
-#define NAME_MAX			255	//255•¶š‚Ü‚Å
+//ãƒ‘ã‚¹ã®é•·ã•
+#define PATH_MAX			255	//255æ–‡å­—ã¾ã§
+#define NAME_MAX			255	//255æ–‡å­—ã¾ã§
 
-//‰æ‘œ
-#define IMAGE_LOAD_ERR_TITLE	TEXT("‰æ‘œ“Ç‚İ‚İƒGƒ‰[")		//‰æ‘œ“Ç‚İ‚İƒGƒ‰[ƒƒbƒZ[ƒW
-#define IMAGE_TITLE_BK_PATH		TEXT(".\\IMAGE\\TitleBack.png") //ƒ^ƒCƒgƒ‹”wŒi‚ÌƒpƒX
-#define IMAGE_TITLE_ROGO_PATH	TEXT(".\\IMAGE\\titlerogo.png")	//ƒ^ƒCƒgƒ‹ƒƒS‚ÌƒpƒX
-#define	IMAGE_TITLE_ROGO_ROTA	0.25		//ƒ^ƒCƒgƒ‹ƒƒSŠg‘å—¦
-#define IMAGE_TITLE_START_PATH		TEXT(".\\IMAGE\\title_start.png")	//ƒ^ƒCƒgƒ‹ƒXƒ^[ƒg‚Ì‰æ‘œ
+//ç”»åƒ
+#define IMAGE_LOAD_ERR_TITLE	TEXT("ç”»åƒèª­ã¿è¾¼ã¿ã‚¨ãƒ©ãƒ¼")		//ç”»åƒèª­ã¿è¾¼ã¿ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸
+#define IMAGE_TITLE_BK_PATH		TEXT(".\\IMAGE\\TitleBack.png") //ã‚¿ã‚¤ãƒˆãƒ«èƒŒæ™¯ã®ãƒ‘ã‚¹
+#define IMAGE_TITLE_ROGO_PATH	TEXT(".\\IMAGE\\titlerogo.png")	//ã‚¿ã‚¤ãƒˆãƒ«ãƒ­ã‚´ã®ãƒ‘ã‚¹
+#define	IMAGE_TITLE_ROGO_ROTA	0.25		//ã‚¿ã‚¤ãƒˆãƒ«ãƒ­ã‚´æ‹¡å¤§ç‡
+#define IMAGE_TITLE_START_PATH		TEXT(".\\IMAGE\\title_start.png")	//ã‚¿ã‚¤ãƒˆãƒ«ã‚¹ã‚¿ãƒ¼ãƒˆã®ç”»åƒ
 #define IMAGE_TITLE_START_ROTA	1
-//‰¹Šy
-#define MUSIC_LOAD_ERR_TITLE	TEXT("‰¹Šy“Ç‚İ‚İƒGƒ‰[")		//‰¹Šy“Ç‚İ‚İƒGƒ‰[ƒƒbƒZ[ƒW
-#define MUSIC_START_PATH		TEXT(".\\MUSIC\\start.mp3")		//ƒ^ƒCƒgƒ‹BGM
-#define MUSIC_PLAY_PATH			TEXT(".\\MUSIC\\play.mp3")		//ƒvƒŒƒCBGM
-/*----------ƒvƒƒgƒ^ƒCƒvéŒ¾----------*/
-//ƒXƒ^[ƒg‰æ–Ê
-VOID MY_START(VOID);		//ƒXƒ^[ƒg‰æ–Ê
-VOID MY_START_PROC(VOID);	//ƒXƒ^[ƒg‰æ–Ê‚Ìˆ—
-VOID MY_START_DRAW(VOID);	//ƒXƒ^[ƒg‰æ–Ê‚Ì•`‰æ
+//éŸ³æ¥½
+#define MUSIC_LOAD_ERR_TITLE	TEXT("éŸ³æ¥½èª­ã¿è¾¼ã¿ã‚¨ãƒ©ãƒ¼")		//éŸ³æ¥½èª­ã¿è¾¼ã¿ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸
+#define MUSIC_START_PATH		TEXT(".\\MUSIC\\start.mp3")		//ã‚¿ã‚¤ãƒˆãƒ«BGM
+#define MUSIC_PLAY_PATH			TEXT(".\\MUSIC\\play.mp3")		//ãƒ—ãƒ¬ã‚¤BGM
 
-//ƒvƒŒƒC‰æ–Ê
-VOID MY_PLAY(VOID);			//ƒvƒŒƒC‰æ–Ê
-VOID MY_PLAY_PROC(VOID);	//ƒvƒŒƒC‰æ–Ê‚Ìˆ—
-VOID MY_PLAY_DRAW(VOID);	//ƒvƒŒƒC‰æ–Ê‚Ì•`‰æ
-VOID MY_PLAY_RESET(VOID);	//ƒvƒŒƒC‰æ–Ê‚Ì‰Šú‰»
+//è‰²
+#define FONT_COLOR_BLACK	GetColor(0,0,0)		//è‰²ï¼šé»’
+#define FONT_COLOR_RED		GetColor(255,0,0)		//è‰²ï¼šèµ¤
 
-//ƒGƒ“ƒh‰æ–Ê
-VOID MY_END(VOID);			//ƒGƒ“ƒh‰æ–Ê
-VOID MY_END_PROC(VOID);		//ƒGƒ“ƒh‰æ–Ê‚Ìˆ—
-VOID MY_END_DRAW(VOID);		//ƒGƒ“ƒh‰æ–Ê‚Ì•`‰æ
 
-//ƒL[“ü—Íˆ—
-VOID MY_ALL_KEYDOWN_UPDATE(VOID);	//ƒL[‚Ì“ü—Íó‘Ô‚ğXV‚·‚é
-BOOL MY_KEY_DOWN(int);				//ƒL[‚ğ‰Ÿ‚µ‚Ä‚¢‚é‚©AƒL[ƒR[ƒh‚Å”»’f‚·‚é
-BOOL MY_KEY_UP(int);				//ƒL[‚ğ‰Ÿ‚µã‚°‚½‚©AƒL[ƒR[ƒh‚Å”»’f‚·‚é
-BOOL MY_KEYDOWN_KEEP(int, int);		//ƒL[‚ğ‰Ÿ‚µ‘±‚¯‚Ä‚¢‚é‚©AƒL[ƒR[ƒh‚Å”»’f‚·‚é
+/*----------ãƒ—ãƒ­ãƒˆã‚¿ã‚¤ãƒ—å®£è¨€----------*/
+//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢
+VOID MY_START(VOID);		//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢
+VOID MY_START_PROC(VOID);	//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢ã®å‡¦ç†
+VOID MY_START_DRAW(VOID);	//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢ã®æç”»
 
-//FPSŠÖ˜A
-VOID MY_FPS_UPDATE(VOID);			//FPS’l‚ğŒv‘ªAXV‚·‚éŠÖ”
-VOID MY_FPS_DRAW(VOID);				//FPS’l‚ğ•`‰æ‚·‚éŠÖ”
-VOID MY_FPS_WAIT(VOID);				//FPS’l‚ğŒv‘ª‚µA‘Ò‚ÂŠÖ”
+//ãƒ—ãƒ¬ã‚¤ç”»é¢
+VOID MY_PLAY(VOID);			//ãƒ—ãƒ¬ã‚¤ç”»é¢
+VOID MY_PLAY_PROC(VOID);	//ãƒ—ãƒ¬ã‚¤ç”»é¢ã®å‡¦ç†
+VOID MY_PLAY_DRAW(VOID);	//ãƒ—ãƒ¬ã‚¤ç”»é¢ã®æç”»
+VOID MY_PLAY_RESET(VOID);	//ãƒ—ãƒ¬ã‚¤ç”»é¢ã®åˆæœŸåŒ–
+VOID FIRST_FONT_DRAW(VOID);	//å†’é ­ãƒ†ã‚­ã‚¹ãƒˆè¡¨ç¤º
+VOID OPERETING_DRAW(VOID);	//æ“ä½œæ–¹æ³•è¡¨ç¤º
 
-//‰æ‘œ“Ç‚İ‚İˆ—
-BOOL MY_LOAD_IMAGE(VOID);		//‰æ‘œ‚ğ‚Ü‚Æ‚ß‚Ä“Ç‚İ‚ŞŠÖ”
-VOID MY_DELETE_IMAGE(VOID);		//‰æ‘œ‚ğ‚Ü‚Æ‚ß‚Äíœ‚·‚éŠÖ”
+//ã‚¨ãƒ³ãƒ‰ç”»é¢
+VOID MY_END(VOID);			//ã‚¨ãƒ³ãƒ‰ç”»é¢
+VOID MY_END_PROC(VOID);		//ã‚¨ãƒ³ãƒ‰ç”»é¢ã®å‡¦ç†
+VOID MY_END_DRAW(VOID);		//ã‚¨ãƒ³ãƒ‰ç”»é¢ã®æç”»
 
-//‰¹Šy
-BOOL MY_LOAD_MUSIC(VOID);		//‰¹Šy“Ç‚İ‚İ
-VOID MY_DELETE_MUSIC(VOID);		//‰¹Šyíœ
+//ã‚­ãƒ¼å…¥åŠ›å‡¦ç†
+VOID MY_ALL_KEYDOWN_UPDATE(VOID);	//ã‚­ãƒ¼ã®å…¥åŠ›çŠ¶æ…‹ã‚’æ›´æ–°ã™ã‚‹
+BOOL MY_KEY_DOWN(int);				//ã‚­ãƒ¼ã‚’æŠ¼ã—ã¦ã„ã‚‹ã‹ã€ã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰ã§åˆ¤æ–­ã™ã‚‹
+BOOL MY_KEY_UP(int);				//ã‚­ãƒ¼ã‚’æŠ¼ã—ä¸Šã’ãŸã‹ã€ã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰ã§åˆ¤æ–­ã™ã‚‹
+BOOL MY_KEYDOWN_KEEP(int, int);		//ã‚­ãƒ¼ã‚’æŠ¼ã—ç¶šã‘ã¦ã„ã‚‹ã‹ã€ã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰ã§åˆ¤æ–­ã™ã‚‹
 
-/*----------ƒOƒ[ƒoƒ‹•Ï”----------*/
-//ƒV[ƒ“‚Ì’Ç‰Á
+//FPSé–¢é€£
+VOID MY_FPS_UPDATE(VOID);			//FPSå€¤ã‚’è¨ˆæ¸¬ã€æ›´æ–°ã™ã‚‹é–¢æ•°
+VOID MY_FPS_DRAW(VOID);				//FPSå€¤ã‚’æç”»ã™ã‚‹é–¢æ•°
+VOID MY_FPS_WAIT(VOID);				//FPSå€¤ã‚’è¨ˆæ¸¬ã—ã€å¾…ã¤é–¢æ•°
+
+//ç”»åƒèª­ã¿è¾¼ã¿å‡¦ç†
+BOOL MY_LOAD_IMAGE(VOID);		//ç”»åƒã‚’ã¾ã¨ã‚ã¦èª­ã¿è¾¼ã‚€é–¢æ•°
+VOID MY_DELETE_IMAGE(VOID);		//ç”»åƒã‚’ã¾ã¨ã‚ã¦å‰Šé™¤ã™ã‚‹é–¢æ•°
+
+//éŸ³æ¥½
+BOOL MY_LOAD_MUSIC(VOID);		//éŸ³æ¥½èª­ã¿è¾¼ã¿
+VOID MY_DELETE_MUSIC(VOID);		//éŸ³æ¥½å‰Šé™¤
+
+/*----------ã‚°ãƒ­ãƒ¼ãƒãƒ«å¤‰æ•°----------*/
+//ã‚·ãƒ¼ãƒ³ã®è¿½åŠ 
 enum GAME_SCENE {
 	GAME_SCENE_START,
 	GAME_SCENE_PLAY,
 	GAME_SCENE_END
 };
 
-//‰æ‘œ\‘¢‘Ì
+//ç”»åƒæ§‹é€ ä½“
 typedef struct STRUCT_IMAGE
 {
-	char path[PATH_MAX];		//ƒpƒX
-	int handle;					//ƒnƒ“ƒhƒ‹
-	int x;						//XˆÊ’u
-	int y;						//YˆÊ’u
-	int width;					//•
-	int height;					//‚‚³
+	char path[PATH_MAX];		//ãƒ‘ã‚¹
+	int handle;					//ãƒãƒ³ãƒ‰ãƒ«
+	int x;						//Xä½ç½®
+	int y;						//Yä½ç½®
+	int width;					//å¹…
+	int height;					//é«˜ã•
 }IMAGE;
 
-//‰ñ“]Šg‘å‚·‚é‰æ‘œ‚Ì\‘¢‘Ì
+//å›è»¢æ‹¡å¤§ã™ã‚‹ç”»åƒã®æ§‹é€ ä½“
 typedef struct STRUCT_IMAGE_ROTA
 {
-	IMAGE image;		//IMAGE\‘¢‘Ì
-	double angle;		//‰ñ“]—¦
-	double rate;		//Šg‘å—¦
+	IMAGE image;		//IMAGEæ§‹é€ ä½“
+	double angle;		//å›è»¢ç‡
+	double rate;		//æ‹¡å¤§ç‡
 
 }IMAGE_ROTA;
 
-//ƒvƒŒƒCƒ„[
+//ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼
 typedef struct STRUCT_CHARA
 {
-	IMAGE image;				//IMAGE\‘¢‘Ì
-	int speed = 1;					//‘¬‚³
+	IMAGE image;				//IMAGEæ§‹é€ ä½“
+	int speed = 1;					//é€Ÿã•
 
-	RECT coll;					//“–‚½‚è”»’è
+	RECT coll;					//å½“ãŸã‚Šåˆ¤å®š
 	int PlayerStartPosX = 30;
 	int PlayerStartPosY = 300;
-}CHARA;	//ƒLƒƒƒ‰ƒNƒ^[\‘¢‘Ì
+}CHARA;	//ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼æ§‹é€ ä½“
 
-//‰¹Šy\‘¢‘Ì
+//éŸ³æ¥½æ§‹é€ ä½“
 typedef struct STRUCT_MUSIC
 {
-	char path[PATH_MAX];		//ƒpƒX
-	int handle;					//ƒnƒ“ƒhƒ‹
+	char path[PATH_MAX];		//ãƒ‘ã‚¹
+	int handle;					//ãƒãƒ³ãƒ‰ãƒ«
 }MUSIC;
 
-//ƒV[ƒ“
+//ã‚·ãƒ¼ãƒ³
 int GameScene;
 
-//ƒL[ƒ{[ƒh‚Ì“ü—Í‚ğæ“¾
-char AllKeyState[256] = { '\0' };			//‚·‚×‚Ä‚ÌƒL[‚Ìó‘Ô‚ª“ü‚é
-char OldAllKeyState[256] = { '\0' };	//‚·‚×‚Ä‚ÌƒL[‚Ìó‘Ô(’¼‘O)‚ª“ü—Í
-int StartTimeFps;						//‘ª’èŠJn
-int CountFps;							//ƒJƒEƒ“ƒ^
-float CalcFps;							//ŒvZŒ‹‰Ê
-int SampleNumFps = GAME_FPS;		//•½‹Ï‚ğæ‚éƒTƒ“ƒvƒ‹”
+//ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã®å…¥åŠ›ã‚’å–å¾—
+char AllKeyState[256] = { '\0' };			//ã™ã¹ã¦ã®ã‚­ãƒ¼ã®çŠ¶æ…‹ãŒå…¥ã‚‹
+char OldAllKeyState[256] = { '\0' };	//ã™ã¹ã¦ã®ã‚­ãƒ¼ã®çŠ¶æ…‹(ç›´å‰)ãŒå…¥åŠ›
+int StartTimeFps;						//æ¸¬å®šé–‹å§‹æ™‚åˆ»
+int CountFps;							//ã‚«ã‚¦ãƒ³ã‚¿
+float CalcFps;							//è¨ˆç®—çµæœ
+int SampleNumFps = GAME_FPS;		//å¹³å‡ã‚’å–ã‚‹ã‚µãƒ³ãƒ—ãƒ«æ•°
 
-//‰æ‘œ
-IMAGE ImageTitleBK;					//ƒ^ƒCƒgƒ‹”wŒi
-IMAGE_ROTA ImageTitleRogo;			//ƒ^ƒCƒgƒ‹ƒƒS
-IMAGE_ROTA ImageTitleStart;			//ƒ^ƒCƒgƒ‹ƒXƒ^[ƒg‚Ì‰æ‘œ
+//ç”»åƒ
+IMAGE ImageTitleBK;					//ã‚¿ã‚¤ãƒˆãƒ«èƒŒæ™¯
+IMAGE_ROTA ImageTitleRogo;			//ã‚¿ã‚¤ãƒˆãƒ«ãƒ­ã‚´
+IMAGE_ROTA ImageTitleStart;			//ã‚¿ã‚¤ãƒˆãƒ«ã‚¹ã‚¿ãƒ¼ãƒˆã®ç”»åƒ
 
-//‰¹Šy
-MUSIC musicStart;		//ƒXƒ^[ƒg‰æ–Ê‚Ì‰¹Šy
-MUSIC musicPlay;		//ƒvƒŒƒC‰æ–Ê‚Ì‰¹Šy
+//éŸ³æ¥½
+MUSIC musicStart;		//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢ã®éŸ³æ¥½
+MUSIC musicPlay;		//ãƒ—ãƒ¬ã‚¤ç”»é¢ã®éŸ³æ¥½
+
+//å†’é ­
+int fontX = GAME_WIDTH / 6;
+int fontY = GAME_HEIGHT / 4;
+int fontNum = 1;
+BOOL inGameMain = FALSE;		//åˆ¤å®šï¼šã‚²ãƒ¼ãƒ æœ¬ç·¨
+BOOL isFontNext = TRUE;		//åˆ¤å®šï¼šå†’é ­ãƒ†ã‚­ã‚¹ãƒˆæ¬¡ã«é€²ã‚€
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	ChangeWindowMode(TRUE);						//ƒEƒBƒ“ƒhƒEƒ‚[ƒh‚Éİ’è
-	SetGraphMode(GAME_WIDTH, GAME_HEIGHT, GAME_COLOR);	//w’è‚Ì”’l‚ÅƒEƒBƒ“ƒhƒE‚ğ•\¦‚·‚é
-	SetWindowStyleMode(GAME_WINDOW_BAR);		//ƒ^ƒCƒgƒ‹ƒo[‚ÍƒfƒtƒHƒ‹ƒg‚É‚·‚é
-	SetMainWindowText(TEXT(GAME_WINDOW_NAME));	//ƒEƒBƒ“ƒhƒE‚Ìƒ^ƒCƒgƒ‹‚Ì•¶š
-	SetAlwaysRunFlag(TRUE);						//”ñƒAƒNƒeƒBƒu‚Å‚àÀs‚·‚é
-	SetMouseDispFlag(FALSE);					//ƒ}ƒEƒXƒJ[ƒ\ƒ‹”ñ•\¦
+	ChangeWindowMode(TRUE);						//ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒ¢ãƒ¼ãƒ‰ã«è¨­å®š
+	SetGraphMode(GAME_WIDTH, GAME_HEIGHT, GAME_COLOR);	//æŒ‡å®šã®æ•°å€¤ã§ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’è¡¨ç¤ºã™ã‚‹
+	SetWindowStyleMode(GAME_WINDOW_BAR);		//ã‚¿ã‚¤ãƒˆãƒ«ãƒãƒ¼ã¯ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã«ã™ã‚‹
+	SetMainWindowText(TEXT(GAME_WINDOW_NAME));	//ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ã‚¿ã‚¤ãƒˆãƒ«ã®æ–‡å­—
+	SetAlwaysRunFlag(TRUE);						//éã‚¢ã‚¯ãƒ†ã‚£ãƒ–ã§ã‚‚å®Ÿè¡Œã™ã‚‹
+	SetMouseDispFlag(FALSE);					//ãƒã‚¦ã‚¹ã‚«ãƒ¼ã‚½ãƒ«éè¡¨ç¤º
 
-	if (DxLib_Init() == -1) { return -1; }	//‚c‚wƒ‰ƒCƒuƒ‰ƒŠ‰Šú‰»ˆ—
+	if (DxLib_Init() == -1) { return -1; }	//ï¼¤ï¼¸ãƒ©ã‚¤ãƒ–ãƒ©ãƒªåˆæœŸåŒ–å‡¦ç†
 
-	int DrawX = 0;	//•\¦ˆÊ’uX
-	int DrawY = 0;	//•\¦ˆÊ’uY
+	int DrawX = 0;	//è¡¨ç¤ºä½ç½®X
+	int DrawY = 0;	//è¡¨ç¤ºä½ç½®Y
 
-	SetDrawScreen(DX_SCREEN_BACK);	//DrawŒnŠÖ”‚Í— ‰æ–Ê‚É•`‰æ
+	SetDrawScreen(DX_SCREEN_BACK);	//Drawç³»é–¢æ•°ã¯è£ç”»é¢ã«æç”»
 
-	//‰æ‘œ“Ç‚İ‚İ
+	//ç”»åƒèª­ã¿è¾¼ã¿
 	if (MY_LOAD_IMAGE() == FALSE) { return -1; }
 
-	//‰¹Šy“Ç‚İ‚İ
+	//éŸ³æ¥½èª­ã¿è¾¼ã¿
 	if (MY_LOAD_MUSIC() == FALSE) { return -1; }
 
-	GameScene = GAME_SCENE_START;//Å‰‚ÍƒXƒ^[ƒg‰æ–Ê‚©‚ç
+	GameScene = GAME_SCENE_START;//æœ€åˆã¯ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢ã‹ã‚‰
 
-	//–³ŒÀƒ‹[ƒv
+	//ç„¡é™ãƒ«ãƒ¼ãƒ—
 	while (TRUE)
 	{
-		if (ProcessMessage() != FALSE) { break; }	//ƒƒbƒZ[ƒWˆ—‚ÌŒ‹‰Ê‚ªƒGƒ‰[‚Ì‚Æ‚«A‹­§I—¹
+		if (ProcessMessage() != FALSE) { break; }	//ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸å‡¦ç†ã®çµæœãŒã‚¨ãƒ©ãƒ¼ã®ã¨ãã€å¼·åˆ¶çµ‚äº†
 
-		if (ClearDrawScreen() != FALSE) { break; }	//‰æ–Ê‚ğÁ‹‚Å‚«‚È‚©‚Á‚½‚Æ‚«A‹­§I—¹
+		if (ClearDrawScreen() != FALSE) { break; }	//ç”»é¢ã‚’æ¶ˆå»ã§ããªã‹ã£ãŸã¨ãã€å¼·åˆ¶çµ‚äº†
 
-		MY_FPS_UPDATE();	//FPS‚Ìˆ—[XV]
-		MY_FPS_DRAW();		//FPS‚Ìˆ—[•`‰æ]
-		MY_FPS_WAIT();		//FPS‚Ìˆ—[‘Ò‚Â]
+		MY_FPS_UPDATE();	//FPSã®å‡¦ç†[æ›´æ–°]
+		//MY_FPS_DRAW();		//FPSã®å‡¦ç†[æç”»]
+		MY_FPS_WAIT();		//FPSã®å‡¦ç†[å¾…ã¤]
 
-		MY_ALL_KEYDOWN_UPDATE();				//‰Ÿ‚µ‚Ä‚¢‚éƒL[ó‘Ô‚ğæ“¾
+		MY_ALL_KEYDOWN_UPDATE();				//æŠ¼ã—ã¦ã„ã‚‹ã‚­ãƒ¼çŠ¶æ…‹ã‚’å–å¾—
 
-		//ƒV[ƒ“‚²‚Æ‚Éˆ—‚ğs‚¤
+		//ã‚·ãƒ¼ãƒ³ã”ã¨ã«å‡¦ç†ã‚’è¡Œã†
 		switch (GameScene)
 		{
 		case GAME_SCENE_START:
-			MY_START();	//ƒXƒ^[ƒg‰æ–Ê
+			MY_START();	//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢
 			break;
 		case GAME_SCENE_PLAY:
-			MY_PLAY();	//ƒvƒŒƒC‰æ–Ê
+			MY_PLAY();	//ãƒ—ãƒ¬ã‚¤ç”»é¢
 			break;
 		case GAME_SCENE_END:
-			MY_END();	//ƒGƒ“ƒh‰æ–Ê
+			MY_END();	//ã‚¨ãƒ³ãƒ‰ç”»é¢
 			break;
 		}
 
-		ScreenFlip();		//ƒ‚ƒjƒ^‚ÌƒŠƒtƒŒƒbƒVƒ…ƒŒ[ƒg‚Ì‘¬‚³‚Å— ‰æ–Ê‚ğÄ•`‰æ
+		ScreenFlip();		//ãƒ¢ãƒ‹ã‚¿ã®ãƒªãƒ•ãƒ¬ãƒƒã‚·ãƒ¥ãƒ¬ãƒ¼ãƒˆã®é€Ÿã•ã§è£ç”»é¢ã‚’å†æç”»
 	}
 
-	//‰æ‘œƒnƒ“ƒhƒ‹‚ğ”jŠü
+	//ç”»åƒãƒãƒ³ãƒ‰ãƒ«ã‚’ç ´æ£„
 	MY_DELETE_IMAGE();
 
-	//‰¹Šyíœ
+	//éŸ³æ¥½å‰Šé™¤
 	MY_DELETE_MUSIC();
-	DxLib_End();	//‚c‚wƒ‰ƒCƒuƒ‰ƒŠg—p‚ÌI—¹ˆ—
+	DxLib_End();	//ï¼¤ï¼¸ãƒ©ã‚¤ãƒ–ãƒ©ãƒªä½¿ç”¨ã®çµ‚äº†å‡¦ç†
 
 	return 0;
 }
 
-/*----------ƒXƒ^[ƒg‰æ–Ê----------*/
+/*----------ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢----------*/
 VOID MY_START(VOID)
 {
-	MY_START_PROC();	//ƒXƒ^[ƒg‰æ–Ê‚Ìˆ—
-	MY_START_DRAW();	//ƒXƒ^[ƒg‰æ–Ê‚Ì•`‰æ
+	MY_START_PROC();	//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢ã®å‡¦ç†
+	MY_START_DRAW();	//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢ã®æç”»
 
 	return;
 }
 
-//ƒXƒ^[ƒg‰æ–Ê‚Ìˆ—
+//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢ã®å‡¦ç†
 VOID MY_START_PROC(VOID)
 {
-	//BGMÄ¶
-	if (CheckSoundMem(musicStart.handle) == 0) {					//³‚µ‚­“Ç‚İæ‚ê‚Ä‚¢‚½‚ç
-		ChangeVolumeSoundMem(255 * 50 / 100, musicStart.handle);	//‰¹—Ê•ÏX
-		PlaySoundMem(musicStart.handle, DX_PLAYTYPE_LOOP);			//Ä¶
+	//BGMå†ç”Ÿ
+	if (CheckSoundMem(musicStart.handle) == 0) {					//æ­£ã—ãèª­ã¿å–ã‚Œã¦ã„ãŸã‚‰
+		ChangeVolumeSoundMem(255 * 50 / 100, musicStart.handle);	//éŸ³é‡å¤‰æ›´
+		PlaySoundMem(musicStart.handle, DX_PLAYTYPE_LOOP);			//å†ç”Ÿ
 	}
-	//ƒGƒ“ƒ^[ƒL[‚ğ‰Ÿ‚µ‚½‚çAƒvƒŒƒCƒV[ƒ“‚ÖˆÚ“®‚·‚é
-	if (MY_KEY_DOWN(KEY_INPUT_RETURN) == TRUE)
+	//ã‚¨ãƒ³ã‚¿ãƒ¼ã‚­ãƒ¼ã‚’æŠ¼ã—ãŸã‚‰ã€ãƒ—ãƒ¬ã‚¤ã‚·ãƒ¼ãƒ³ã¸ç§»å‹•ã™ã‚‹
+	if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
 	{
-		//BGM’â~
+		//BGMåœæ­¢
 		if (CheckSoundMem(musicStart.handle) != 0) {
 			StopSoundMem(musicStart.handle);
 		}
@@ -225,13 +240,13 @@ VOID MY_START_PROC(VOID)
 	return;
 }
 
-//ƒXƒ^[ƒg‰æ–Ê‚Ì•`‰æ
+//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢ã®æç”»
 VOID MY_START_DRAW(VOID)
 {
-	//”wŒi
+	//èƒŒæ™¯
 	DrawGraph(0, 0, ImageTitleBK.handle, TRUE);
 
-	//ƒƒS
+	//ãƒ­ã‚´
 	DrawRotaGraph(
 		ImageTitleRogo.image.x,
 		ImageTitleRogo.image.y,
@@ -241,7 +256,7 @@ VOID MY_START_DRAW(VOID)
 		TRUE
 	);
 
-	//ƒXƒ^[ƒg•\¦
+	//ã‚¹ã‚¿ãƒ¼ãƒˆè¡¨ç¤º
 	DrawRotaGraph(
 		ImageTitleStart.image.x,
 		ImageTitleStart.image.y,
@@ -250,11 +265,11 @@ VOID MY_START_DRAW(VOID)
 		ImageTitleStart.image.handle,
 		TRUE);
 
-	DrawString(0, 0, "ƒXƒ^[ƒg‰æ–Ê", GetColor(255, 255, 255));
+	DrawString(0, 0, "ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢", GetColor(255, 255, 255));
 	return;
 }
 
-/*----------ƒvƒŒƒC‰æ–Ê----------*/
+/*----------ãƒ—ãƒ¬ã‚¤ç”»é¢----------*/
 VOID MY_PLAY(VOID) {
 	MY_PLAY_PROC();
 	MY_PLAY_DRAW();
@@ -262,48 +277,73 @@ VOID MY_PLAY(VOID) {
 
 VOID MY_PLAY_PROC(VOID)
 {
-	//BGMÄ¶
-	if (CheckSoundMem(musicPlay.handle) == 0) {					//³‚µ‚­“Ç‚İæ‚ê‚Ä‚¢‚½‚ç
-		ChangeVolumeSoundMem(255 * 50 / 100, musicPlay.handle);	//‰¹—Ê•ÏX
-		PlaySoundMem(musicPlay.handle, DX_PLAYTYPE_LOOP);			//Ä¶
+
+
+	//ãƒ†ã‚­ã‚¹ãƒˆå†’é ­å‡¦ç†
+	if (!inGameMain) {
+		SetFontSize(26);
+		if (MY_KEY_DOWN(KEY_INPUT_RETURN) == TRUE)
+		{
+			if (isFontNext) {
+				++fontNum;
+				if (fontNum >= 7) {
+					inGameMain = TRUE;
+				}
+			}
+			isFontNext = false;
+		}
+		if (MY_KEY_UP(KEY_INPUT_RETURN) == TRUE)
+		{
+			isFontNext = TRUE;
+		}
 	}
 
-	//ƒXƒy[ƒXƒL[‚ğ‰Ÿ‚µ‚½‚çAƒGƒ“ƒhƒV[ƒ“‚ÖˆÚ“®‚·‚é
-	if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
-	{
-		//BGM’â~
-		if (CheckSoundMem(musicPlay.handle) != 0) {
-			StopSoundMem(musicPlay.handle);
+	if (inGameMain) {
+		SetFontSize(16);
+		//BGMå†ç”Ÿ
+		if (CheckSoundMem(musicPlay.handle) == 0) {					//æ­£ã—ãèª­ã¿å–ã‚Œã¦ã„ãŸã‚‰
+			ChangeVolumeSoundMem(255 * 50 / 100, musicPlay.handle);	//éŸ³é‡å¤‰æ›´
+			PlaySoundMem(musicPlay.handle, DX_PLAYTYPE_LOOP);			//å†ç”Ÿ
 		}
 
-		GameScene = GAME_SCENE_END;
+		//ã‚¹ãƒšãƒ¼ã‚¹ã‚­ãƒ¼ã‚’æŠ¼ã—ãŸã‚‰ã€ã‚¨ãƒ³ãƒ‰ã‚·ãƒ¼ãƒ³ã¸ç§»å‹•ã™ã‚‹
+	    //if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
+		//{
+		//	//BGMåœæ­¢
+		//	if (CheckSoundMem(musicPlay.handle) != 0) {
+		//		StopSoundMem(musicPlay.handle);
+		//	}
+
+		//	GameScene = GAME_SCENE_END;
+		//}
 	}
 
+	
+
 	return;
 }
 
-//ƒvƒŒƒC‰æ–Ê‚Ì•`‰æ
+//ãƒ—ãƒ¬ã‚¤ç”»é¢ã®æç”»
 VOID MY_PLAY_DRAW(VOID)
 {
-	//—Î‚ÌlŠp‚ğ•`‰æ
-	DrawBox(10, 10, GAME_WIDTH - 10, GAME_HEIGHT - 10, GetColor(0, 255, 0), TRUE);
+	FIRST_FONT_DRAW();		//é–¢æ•°ï¼šå†’é ­ãƒ†ã‚­ã‚¹ãƒˆè¡¨ç¤º
+	OPERETING_DRAW();		//é–¢æ•°ï¼šæ“ä½œèª¬æ˜
 
-	DrawString(0, 0, "ƒvƒŒƒC‰æ–Ê(ƒXƒy[ƒXƒL[‚ğ‰Ÿ‚µ‚Ä‰º‚³‚¢)", GetColor(255, 255, 255));
 	return;
 }
 
-/*----------ƒGƒ“ƒh‰æ–Ê----------*/
+/*----------ã‚¨ãƒ³ãƒ‰ç”»é¢----------*/
 VOID MY_END(VOID)
 {
-	MY_END_PROC();	//ƒGƒ“ƒh‰æ–Ê‚Ìˆ—
-	MY_END_DRAW();	//ƒGƒ“ƒh‰æ–Ê‚Ì•`‰æ
+	MY_END_PROC();	//ã‚¨ãƒ³ãƒ‰ç”»é¢ã®å‡¦ç†
+	MY_END_DRAW();	//ã‚¨ãƒ³ãƒ‰ç”»é¢ã®æç”»
 	return;
 }
 
-//ƒGƒ“ƒh‰æ–Ê‚Ìˆ—
+//ã‚¨ãƒ³ãƒ‰ç”»é¢ã®å‡¦ç†
 VOID MY_END_PROC(VOID)
 {
-	//ƒGƒXƒP[ƒvƒL[‚ğ‰Ÿ‚µ‚½‚çAƒXƒ^[ƒgƒV[ƒ“‚ÖˆÚ“®‚·‚é
+	//ã‚¨ã‚¹ã‚±ãƒ¼ãƒ—ã‚­ãƒ¼ã‚’æŠ¼ã—ãŸã‚‰ã€ã‚¹ã‚¿ãƒ¼ãƒˆã‚·ãƒ¼ãƒ³ã¸ç§»å‹•ã™ã‚‹
 	if (MY_KEY_DOWN(KEY_INPUT_ESCAPE) == TRUE)
 	{
 		GameScene = GAME_SCENE_START;
@@ -312,28 +352,28 @@ VOID MY_END_PROC(VOID)
 	return;
 }
 
-//ƒGƒ“ƒh‰æ–Ê‚Ì•`‰æ
+//ã‚¨ãƒ³ãƒ‰ç”»é¢ã®æç”»
 VOID MY_END_DRAW(VOID)
 {
-	//Â‚ÌlŠp‚ğ•`‰æ
+	//é’ã®å››è§’ã‚’æç”»
 	DrawBox(10, 10, GAME_WIDTH - 10, GAME_HEIGHT - 10, GetColor(0, 0, 255), TRUE);
 
-	DrawString(0, 0, "ƒGƒ“ƒh‰æ–Ê(ƒGƒXƒP[ƒvƒL[‚ğ‰Ÿ‚µ‚Ä‰º‚³‚¢)", GetColor(255, 255, 255));
+	DrawString(0, 0, "ã‚¨ãƒ³ãƒ‰ç”»é¢(ã‚¨ã‚¹ã‚±ãƒ¼ãƒ—ã‚­ãƒ¼ã‚’æŠ¼ã—ã¦ä¸‹ã•ã„)", GetColor(255, 255, 255));
 	return;
 }
 
 /*------------FPS----------*/
 VOID MY_FPS_UPDATE(VOID)
 {
-	if (CountFps == 0) //1ƒtƒŒ[ƒ€–Ú‚È‚ç‚ğ‹L‰¯
+	if (CountFps == 0) //1ãƒ•ãƒ¬ãƒ¼ãƒ ç›®ãªã‚‰æ™‚åˆ»ã‚’è¨˜æ†¶
 	{
 		StartTimeFps = GetNowCount();
 	}
 
-	if (CountFps == SampleNumFps) //60ƒtƒŒ[ƒ€–Ú‚È‚ç•½‹Ï‚ğŒvZ
+	if (CountFps == SampleNumFps) //60ãƒ•ãƒ¬ãƒ¼ãƒ ç›®ãªã‚‰å¹³å‡ã‚’è¨ˆç®—
 	{
 		int now = GetNowCount();
-		//Œ»İ‚ÌŠÔ‚©‚çA0ƒtƒŒ[ƒ€–Ú‚ÌŠÔ‚ğˆø‚«AFPS‚Ì”’l‚ÅŠ„‚é1FPS•Ó‚è‚Ì•½‹ÏŠÔ‚ªŒvZ‚³‚ê‚é
+		//ç¾åœ¨ã®æ™‚é–“ã‹ã‚‰ã€0ãƒ•ãƒ¬ãƒ¼ãƒ ç›®ã®æ™‚é–“ã‚’å¼•ãã€FPSã®æ•°å€¤ã§å‰²ã‚‹ï¼1FPSè¾ºã‚Šã®å¹³å‡æ™‚é–“ãŒè¨ˆç®—ã•ã‚Œã‚‹
 		CalcFps = 1000.f / ((now - StartTimeFps) / (float)SampleNumFps);
 		CountFps = 0;
 		StartTimeFps = now;
@@ -345,7 +385,7 @@ VOID MY_FPS_UPDATE(VOID)
 
 VOID MY_FPS_DRAW(VOID)
 {
-	//•¶š—ñ‚ğ•`‰æ
+	//æ–‡å­—åˆ—ã‚’æç”»
 	DrawFormatString(0, GAME_HEIGHT - 20, GetColor(255, 255, 255), "FPS:%.1f", CalcFps);
 	return;
 }
@@ -353,90 +393,90 @@ VOID MY_FPS_DRAW(VOID)
 
 VOID MY_FPS_WAIT(VOID)
 {
-	int resultTime = GetNowCount() - StartTimeFps;					//‚©‚©‚Á‚½ŠÔ
-	int waitTime = CountFps * 1000 / GAME_FPS - resultTime;	//‘Ò‚Â‚×‚«ŠÔ
+	int resultTime = GetNowCount() - StartTimeFps;					//ã‹ã‹ã£ãŸæ™‚é–“
+	int waitTime = CountFps * 1000 / GAME_FPS - resultTime;	//å¾…ã¤ã¹ãæ™‚é–“
 
-	if (waitTime > 0)		//w’è‚ÌFPS’l‚æ‚è‚à‘‚¢ê‡
+	if (waitTime > 0)		//æŒ‡å®šã®FPSå€¤ã‚ˆã‚Šã‚‚æ—©ã„å ´åˆ
 	{
-		WaitTimer(waitTime);	//‘Ò‚Â
+		WaitTimer(waitTime);	//å¾…ã¤
 	}
 	return;
 }
 
-/*------------------ƒL[“ü—Íˆ—ŠÖ”-----------------------------*/
-//ƒL[“ü—Í‚Ìó‘Ô‚ğˆÛ
+/*------------------ã‚­ãƒ¼å…¥åŠ›å‡¦ç†é–¢æ•°-----------------------------*/
+//ã‚­ãƒ¼å…¥åŠ›ã®çŠ¶æ…‹ã‚’ç¶­æŒ
 VOID MY_ALL_KEYDOWN_UPDATE(VOID)
 {
-	char TempKey[256];	//ˆê“I‚ÉAŒ»İ‚ÌƒL[‚Ì“ü—Íó‘Ô‚ğŠi”[‚·‚é
+	char TempKey[256];	//ä¸€æ™‚çš„ã«ã€ç¾åœ¨ã®ã‚­ãƒ¼ã®å…¥åŠ›çŠ¶æ…‹ã‚’æ ¼ç´ã™ã‚‹
 
-	//’¼‘O‚ÌƒL[“ü—Í‚ğ‚Æ‚Á‚Ä‚¨‚­
+	//ç›´å‰ã®ã‚­ãƒ¼å…¥åŠ›ã‚’ã¨ã£ã¦ãŠã
 	for (int i = 0; i < 256; i++)
 	{
 		OldAllKeyState[i] = AllKeyState[i];
 	}
 
-	GetHitKeyStateAll(TempKey); // ‘S‚Ä‚ÌƒL[‚Ì“ü—Íó‘Ô‚ğ“¾‚é
+	GetHitKeyStateAll(TempKey); // å…¨ã¦ã®ã‚­ãƒ¼ã®å…¥åŠ›çŠ¶æ…‹ã‚’å¾—ã‚‹
 
 	for (int i = 0; i < 256; i++)
 	{
-		if (TempKey[i] != 0)	//‰Ÿ‚³‚ê‚Ä‚¢‚éƒL[‚ÌƒL[ƒR[ƒh‚ğ‰Ÿ‚µ‚Ä‚¢‚é‚Æ‚«
+		if (TempKey[i] != 0)	//æŠ¼ã•ã‚Œã¦ã„ã‚‹ã‚­ãƒ¼ã®ã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰ã‚’æŠ¼ã—ã¦ã„ã‚‹ã¨ã
 		{
-			AllKeyState[i]++;	//‰Ÿ‚³‚ê‚Ä‚¢‚é
+			AllKeyState[i]++;	//æŠ¼ã•ã‚Œã¦ã„ã‚‹
 		}
 		else
 		{
-			AllKeyState[i] = 0;	//‰Ÿ‚³‚ê‚Ä‚¢‚È‚¢
+			AllKeyState[i] = 0;	//æŠ¼ã•ã‚Œã¦ã„ãªã„
 		}
 	}
 	return;
 }
 
-//ƒL[‚ğ‰Ÿ‚µ‚Ä‚¢‚é‚©AƒL[ƒR[ƒh‚Å”»’f‚·‚é
+//ã‚­ãƒ¼ã‚’æŠ¼ã—ã¦ã„ã‚‹ã‹ã€ã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰ã§åˆ¤æ–­ã™ã‚‹
 BOOL MY_KEY_DOWN(int KEY_INPUT_)
 {
-	//ƒL[ƒR[ƒh‚ÌƒL[‚ğ‰Ÿ‚µ‚Ä‚¢‚é
+	//ã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰ã®ã‚­ãƒ¼ã‚’æŠ¼ã—ã¦ã„ã‚‹æ™‚
 	if (AllKeyState[KEY_INPUT_] != 0)
 	{
-		return TRUE;	//ƒL[‚ğ‰Ÿ‚µ‚Ä‚¢‚é
+		return TRUE;	//ã‚­ãƒ¼ã‚’æŠ¼ã—ã¦ã„ã‚‹
 	}
 	else
 	{
-		return FALSE;	//ƒL[‚ğ‰Ÿ‚µ‚Ä‚¢‚È‚¢
+		return FALSE;	//ã‚­ãƒ¼ã‚’æŠ¼ã—ã¦ã„ãªã„
 	}
 }
 
-//ƒL[‚ğ‰Ÿ‚µã‚°‚½‚©AƒL[ƒR[ƒh‚Å”»’f‚·‚é
+//ã‚­ãƒ¼ã‚’æŠ¼ã—ä¸Šã’ãŸã‹ã€ã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰ã§åˆ¤æ–­ã™ã‚‹
 BOOL MY_KEY_UP(int KEY_INPUT_)
 {
-	if (OldAllKeyState[KEY_INPUT_] >= 1	//’¼‘O‚Í‰Ÿ‚µ‚Ä‚¢‚Ä
-		&& AllKeyState[KEY_INPUT_] == 0)	//¡‚Í‰Ÿ‚µ‚Ä‚¢‚È‚¢‚Æ‚«
+	if (OldAllKeyState[KEY_INPUT_] >= 1	//ç›´å‰ã¯æŠ¼ã—ã¦ã„ã¦
+		&& AllKeyState[KEY_INPUT_] == 0)	//ä»Šã¯æŠ¼ã—ã¦ã„ãªã„ã¨ã
 	{
-		return TRUE;	//ƒL[‚ğ‰Ÿ‚µã‚°‚Ä‚¢‚é
+		return TRUE;	//ã‚­ãƒ¼ã‚’æŠ¼ã—ä¸Šã’ã¦ã„ã‚‹
 	}
 	else
 	{
-		return FALSE;	//ƒL[‚ğ‰Ÿ‚µã‚°‚Ä‚¢‚È‚¢
+		return FALSE;	//ã‚­ãƒ¼ã‚’æŠ¼ã—ä¸Šã’ã¦ã„ãªã„
 	}
 }
 
-//ƒL[‚ğ‰Ÿ‚µ‘±‚¯‚Ä‚¢‚é‚©AƒL[ƒR[ƒh‚Å”»’f‚·‚é
+//ã‚­ãƒ¼ã‚’æŠ¼ã—ç¶šã‘ã¦ã„ã‚‹ã‹ã€ã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰ã§åˆ¤æ–­ã™ã‚‹
 BOOL MY_KEYDOWN_KEEP(int KEY_INPUT_, int DownTime)
 {
-	//‰Ÿ‚µ‘±‚¯‚éŠÔ=•b”~FPS’l
-	//—áj60FPS‚ÌƒQ[ƒ€‚ÅA1•bŠÔ‰Ÿ‚µ‘±‚¯‚é‚È‚çA1•b~60FPS
+	//æŠ¼ã—ç¶šã‘ã‚‹æ™‚é–“=ç§’æ•°Ã—FPSå€¤
+	//ä¾‹ï¼‰60FPSã®ã‚²ãƒ¼ãƒ ã§ã€1ç§’é–“æŠ¼ã—ç¶šã‘ã‚‹ãªã‚‰ã€1ç§’Ã—60FPS
 	int UpdateTime = DownTime * GAME_FPS;
 
 	if (AllKeyState[KEY_INPUT_] > UpdateTime)
 	{
-		return TRUE;	//‰Ÿ‚µ‘±‚¯‚Ä‚¢‚é
+		return TRUE;	//æŠ¼ã—ç¶šã‘ã¦ã„ã‚‹
 	}
 	else
 	{
-		return FALSE;	//‰Ÿ‚µ‘±‚¯‚Ä‚¢‚È‚¢
+		return FALSE;	//æŠ¼ã—ç¶šã‘ã¦ã„ãªã„
 	}
 }
 
-/*----------‰æ‘œ“Ç‚İ‚İˆ—----------*/
+/*----------ç”»åƒèª­ã¿è¾¼ã¿å‡¦ç†----------*/
 BOOL MY_LOAD_IMAGE(VOID) {
 	strcpy_s(ImageTitleBK.path, IMAGE_TITLE_BK_PATH);
 	ImageTitleBK.handle = LoadGraph(ImageTitleBK.path);
@@ -444,7 +484,7 @@ BOOL MY_LOAD_IMAGE(VOID) {
 		MessageBox(GetMainWindowHandle(), IMAGE_TITLE_BK_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
 		return FALSE;
 	}
-	GetGraphSize(ImageTitleBK.handle, &ImageTitleBK.width, &ImageTitleBK.height);	//‰æ‘œ‚Ì•‚Æ‚‚³‚ğæ“¾
+	GetGraphSize(ImageTitleBK.handle, &ImageTitleBK.width, &ImageTitleBK.height);	//ç”»åƒã®å¹…ã¨é«˜ã•ã‚’å–å¾—
 	ImageTitleBK.x = GAME_WIDTH / 2 - ImageTitleBK.x / 2;
 	ImageTitleBK.y = GAME_HEIGHT / 2 - ImageTitleBK.y / 2;
 
@@ -455,22 +495,22 @@ BOOL MY_LOAD_IMAGE(VOID) {
 		return FALSE;
 	}
 	ImageTitleRogo.image.x = GAME_WIDTH / 2 - ImageTitleRogo.image.x / 2;
-	ImageTitleRogo.image.y = GAME_HEIGHT / 2.5;
+	ImageTitleRogo.image.y = GAME_HEIGHT / 2 - 50;
 	ImageTitleRogo.angle = 0;
 	ImageTitleRogo.rate = IMAGE_TITLE_ROGO_ROTA;
 
-	//ƒXƒ^[ƒg•\‹L
-	strcpy_s(ImageTitleStart.image.path, IMAGE_TITLE_START_PATH);			//ƒpƒX‚Ìİ’è
-	ImageTitleStart.image.handle = LoadGraph(ImageTitleStart.image.path);			//“Ç‚İ‚İ
+	//ã‚¹ã‚¿ãƒ¼ãƒˆè¡¨è¨˜
+	strcpy_s(ImageTitleStart.image.path, IMAGE_TITLE_START_PATH);			//ãƒ‘ã‚¹ã®è¨­å®š
+	ImageTitleStart.image.handle = LoadGraph(ImageTitleStart.image.path);			//èª­ã¿è¾¼ã¿
 	if (ImageTitleStart.image.handle == -1)
 	{
-		//ƒGƒ‰[ƒƒbƒZ[ƒW•\¦
+		//ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸è¡¨ç¤º
 		MessageBox(GetMainWindowHandle(), IMAGE_TITLE_START_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
 		return FALSE;
 	}
-	GetGraphSize(ImageTitleStart.image.handle, &ImageTitleStart.image.width, &ImageTitleStart.image.height);	//‰æ‘œ‚Ì•‚Æ‚‚³‚ğæ“¾
-	ImageTitleStart.image.x = GAME_WIDTH / 2 - ImageTitleStart.image.x / 2;		//¶‰E’†‰›‘µ‚¦
-	ImageTitleStart.image.y = GAME_HEIGHT/1.2;		//ã‰º’†‰›‘µ‚¦
+	GetGraphSize(ImageTitleStart.image.handle, &ImageTitleStart.image.width, &ImageTitleStart.image.height);	//ç”»åƒã®å¹…ã¨é«˜ã•ã‚’å–å¾—
+	ImageTitleStart.image.x = GAME_WIDTH / 2 - ImageTitleStart.image.x / 2;		//å·¦å³ä¸­å¤®æƒãˆ
+	ImageTitleStart.image.y = GAME_HEIGHT / 2 + 150;		//ä¸Šä¸‹ä¸­å¤®æƒãˆ
 	ImageTitleStart.angle = 0;
 	ImageTitleStart.rate = IMAGE_TITLE_START_ROTA;
 
@@ -483,9 +523,9 @@ VOID MY_DELETE_IMAGE(VOID) {
 	DeleteGraph(ImageTitleStart.image.handle);
 }
 
-/*----------‰¹Šy“Ç‚İ‚İˆ—----------*/
+/*----------éŸ³æ¥½èª­ã¿è¾¼ã¿å‡¦ç†----------*/
 BOOL MY_LOAD_MUSIC(VOID) {
-	//ƒXƒ^[ƒg‰æ–Ê‚ÌBGM
+	//ã‚¹ã‚¿ãƒ¼ãƒˆç”»é¢ã®BGM
 	strcpy_s(musicStart.path, MUSIC_START_PATH);
 	musicStart.handle = LoadSoundMem(musicStart.path);
 	if (musicStart.handle == ERR) {
@@ -506,4 +546,39 @@ BOOL MY_LOAD_MUSIC(VOID) {
 VOID MY_DELETE_MUSIC(VOID) {
 	DeleteSoundMem(musicStart.handle);
 	DeleteSoundMem(musicPlay.handle);
+}
+
+VOID FIRST_FONT_DRAW() {
+	if (!inGameMain) {
+		DrawBox(fontX - 10, fontY - 10, GAME_WIDTH / 2 + 400, GAME_HEIGHT / 2 +150, GetColor(200, 200, 200), TRUE);
+		DrawString(GAME_WIDTH / 2 + 300, GAME_HEIGHT / 2 + 100, "Enterâ†’", FONT_COLOR_BLACK);
+
+		switch (fontNum)
+		{
+		case 1:
+			DrawString(fontX, fontY, "ã‚®ãƒ«ãƒ‰ã‹ã‚‰ä¾é ¼ãŒå±Šãã¾ã—ãŸï¼", FONT_COLOR_BLACK);
+			break;
+		case 2:
+			DrawString(fontX, fontY, "ã¨ã‚ã‚‹ã‚‚ã®ã‚’å–ã£ã¦ãã¦ã»ã—ã„ã€ã¨ã„ã†ä¾é ¼ãŒå±Šã„ãŸã€‚\nå„ä»‹ãªã“ã¨ã«ãªããªãã«ãªã£ã¦ã„ã¦ã€\nä¾é ¼ã®å“ãŒä½•ãªã®ã‹ã‚ã‹ã‚‰ãªã„çŠ¶æ…‹ã ã€‚", FONT_COLOR_BLACK);
+			break;
+		case 3:
+			DrawString(fontX, fontY, "ãã“ã§ã€ã‚ãªãŸã«ã¯è¬ã‚’è§£ãæŒ‡å®šã•ã‚ŒãŸã‚‚ã®ã‚’å±Šã‘ã¦ã»ã—ã„ã€‚\nè¡æ˜ãªã‚ãªãŸãªã‚‰ã§ãã‚‹ã¯ãšã ã€‚", FONT_COLOR_BLACK);
+			break;
+		case 4:
+			DrawString(fontX, fontY, "å±Šã„ãŸè¬ã¯ãƒ»ãƒ»ãƒ»", FONT_COLOR_BLACK);
+			break;
+		case 5:
+			DrawString(fontX, fontY, """ç·‘ã¨é»’ã®æŸ„ã‚’ã‚‚ã¤ã€‚\nå‰²ã‚‹ã¨ã€ä¸­ã‹ã‚‰èµ¤ã„èº«ãŒé£›ã³æ•£ã‚‹ã€‚\næ°´ã«é–¢ä¿‚ã—ã¦ã„ã‚‹ã¨ã‹â€¦ã€‚""", FONT_COLOR_RED);
+			break;
+		case 6:
+			DrawString(fontX, fontY, "é›£ã—ã„ã‹ã‚‚ã—ã‚Œãªã„ãŒé ¼ã‚“ã ãï¼", FONT_COLOR_BLACK);
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+VOID OPERETING_DRAW() {
+
 }
