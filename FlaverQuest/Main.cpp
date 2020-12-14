@@ -18,21 +18,35 @@
 #define PATH_MAX			255	//255文字まで
 #define NAME_MAX			255	//255文字まで
 
+//プレイヤー画像
+#define PLAYER_CHANGE_NUM	3	//プレイヤー画像変更回数
+#define PLAYER_WIDTH	32		//プレイヤー画像横
+#define PLAYER_HEIGHT	32		//プレイヤー画像縦
+#define PLAYER_DIV_TATE		4	//プレイヤー画像縦分割数
+#define	PLAYER_DIV_YOKO		3	//プレイヤー画像横分割数
+#define PLAYER_DIV_NUM		PLAYER_DIV_TATE*PLAYER_DIV_YOKO		//プレイヤー画像総分割数
+#define PLAYER_ROTA			2.0		//プレイヤー拡大率
+
 //画像
 #define IMAGE_LOAD_ERR_TITLE	TEXT("画像読み込みエラー")		//画像読み込みエラーメッセージ
 #define IMAGE_TITLE_BK_PATH		TEXT(".\\IMAGE\\TitleBack.png") //タイトル背景のパス
 #define IMAGE_TITLE_ROGO_PATH	TEXT(".\\IMAGE\\titlerogo.png")	//タイトルロゴのパス
 #define	IMAGE_TITLE_ROGO_ROTA	0.25		//タイトルロゴ拡大率
 #define IMAGE_TITLE_START_PATH		TEXT(".\\IMAGE\\title_start.png")	//タイトルスタートの画像
-#define IMAGE_TITLE_START_ROTA	1
+#define IMAGE_TITLE_START_ROTA	0.8			//スタート拡大率
+#define IMAGE_OPERATING_PATH	TEXT(".\\IMAGE\\Operation.png")		//操作説明画像
+#define IMAGE_OPERATING_ROTA	2.15
+#define IMAGE_PLAYER_PATH		TEXT(".\\IMAGE\\player.png")		//プレイヤー画像パス
+
 //音楽
 #define MUSIC_LOAD_ERR_TITLE	TEXT("音楽読み込みエラー")		//音楽読み込みエラーメッセージ
 #define MUSIC_START_PATH		TEXT(".\\MUSIC\\start.mp3")		//タイトルBGM
 #define MUSIC_PLAY_PATH			TEXT(".\\MUSIC\\play.mp3")		//プレイBGM
 
 //色
-#define FONT_COLOR_BLACK	GetColor(0,0,0)		//色：黒
+#define FONT_COLOR_BLACK	GetColor(0,0,0)			//色：黒
 #define FONT_COLOR_RED		GetColor(255,0,0)		//色：赤
+#define FONT_COLOR_WHITE	GetColor(255,255,255)	//色：白
 
 
 /*----------プロトタイプ宣言----------*/
@@ -47,7 +61,7 @@ VOID MY_PLAY_PROC(VOID);	//プレイ画面の処理
 VOID MY_PLAY_DRAW(VOID);	//プレイ画面の描画
 VOID MY_PLAY_RESET(VOID);	//プレイ画面の初期化
 VOID FIRST_FONT_DRAW(VOID);	//冒頭テキスト表示
-VOID OPERETING_DRAW(VOID);	//操作方法表示
+VOID OPERATING_DRAW(VOID);	//操作方法表示
 
 //エンド画面
 VOID MY_END(VOID);			//エンド画面
@@ -101,15 +115,25 @@ typedef struct STRUCT_IMAGE_ROTA
 
 }IMAGE_ROTA;
 
-//プレイヤー
+//プレイヤー構造体
 typedef struct STRUCT_CHARA
 {
-	IMAGE image;				//IMAGE構造体
-	int speed = 1;					//速さ
+	char path[PATH_MAX];
+	int handle[PLAYER_DIV_NUM];
+	int x;
+	int y;
+	int width;
+	int height;
+	BOOL IsDraw;
+	int nowImageKind;
+	int changeImageCnt;
+	int ChangeImageCntMax;
+	int speed;
+	double angle;
+	double rate;
 
-	RECT coll;					//当たり判定
-	int PlayerStartPosX = 30;
-	int PlayerStartPosY = 300;
+	RECT coll;
+
 }CHARA;	//キャラクター構造体
 
 //音楽構造体
@@ -132,6 +156,7 @@ int SampleNumFps = GAME_FPS;		//平均を取るサンプル数
 
 //画像
 IMAGE ImageTitleBK;					//タイトル背景
+IMAGE_ROTA ImageOperating;				//操作説明
 IMAGE_ROTA ImageTitleRogo;			//タイトルロゴ
 IMAGE_ROTA ImageTitleStart;			//タイトルスタートの画像
 
@@ -145,6 +170,8 @@ int fontY = GAME_HEIGHT / 4;
 int fontNum = 1;
 BOOL inGameMain = FALSE;		//判定：ゲーム本編
 BOOL isFontNext = TRUE;		//判定：冒頭テキスト次に進む
+
+CHARA player;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -286,7 +313,7 @@ VOID MY_PLAY_PROC(VOID)
 		{
 			if (isFontNext) {
 				++fontNum;
-				if (fontNum >= 7) {
+				if (fontNum >= 8) {
 					inGameMain = TRUE;
 				}
 			}
@@ -305,6 +332,17 @@ VOID MY_PLAY_PROC(VOID)
 			ChangeVolumeSoundMem(255 * 50 / 100, musicPlay.handle);	//音量変更
 			PlaySoundMem(musicPlay.handle, DX_PLAYTYPE_LOOP);			//再生
 		}
+
+		player.nowImageKind = 0;
+		//プレイヤー表示
+		DrawRotaGraph(
+			player.x,
+			player.y,
+			player.rate,
+			player.angle,
+			player.handle[player.nowImageKind],
+			TRUE
+		);
 
 		//スペースキーを押したら、エンドシーンへ移動する
 	    //if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
@@ -326,9 +364,15 @@ VOID MY_PLAY_PROC(VOID)
 //プレイ画面の描画
 VOID MY_PLAY_DRAW(VOID)
 {
-	FIRST_FONT_DRAW();		//関数：冒頭テキスト表示
-	OPERETING_DRAW();		//関数：操作説明
+	//冒頭部分
+	if (!inGameMain) {
+		FIRST_FONT_DRAW();		//関数：冒頭テキスト表示
+	}
 
+	//メイン部分
+	else {
+		DrawString(0, 0, "メインゲーム", FONT_COLOR_WHITE);
+	}
 	return;
 }
 
@@ -502,7 +546,7 @@ BOOL MY_LOAD_IMAGE(VOID) {
 	//スタート表記
 	strcpy_s(ImageTitleStart.image.path, IMAGE_TITLE_START_PATH);			//パスの設定
 	ImageTitleStart.image.handle = LoadGraph(ImageTitleStart.image.path);			//読み込み
-	if (ImageTitleStart.image.handle == -1)
+	if (ImageTitleStart.image.handle == ERR)
 	{
 		//エラーメッセージ表示
 		MessageBox(GetMainWindowHandle(), IMAGE_TITLE_START_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
@@ -510,9 +554,42 @@ BOOL MY_LOAD_IMAGE(VOID) {
 	}
 	GetGraphSize(ImageTitleStart.image.handle, &ImageTitleStart.image.width, &ImageTitleStart.image.height);	//画像の幅と高さを取得
 	ImageTitleStart.image.x = GAME_WIDTH / 2 - ImageTitleStart.image.x / 2;		//左右中央揃え
-	ImageTitleStart.image.y = GAME_HEIGHT / 2 + 150;		//上下中央揃え
+	ImageTitleStart.image.y = GAME_HEIGHT / 2 + 200;		//上下中央揃え
 	ImageTitleStart.angle = 0;
 	ImageTitleStart.rate = IMAGE_TITLE_START_ROTA;
+
+	//操作説明
+	strcpy_s(ImageOperating.image.path, IMAGE_OPERATING_PATH);
+	ImageOperating.image.handle = LoadGraph(ImageOperating.image.path);
+	if (ImageOperating.image.handle == ERR) {
+		MessageBox(GetMainWindowHandle(), IMAGE_OPERATING_PATH, IMAGE_LOAD_ERR_TITLE,MB_OK);
+		return FALSE;
+	}
+	ImageOperating.image.x = GAME_WIDTH / 2 - ImageOperating.image.x / 2;
+	ImageOperating.image.y = GAME_HEIGHT / 2 - ImageOperating.image.y / 2;
+	ImageOperating.angle = 0;
+	ImageOperating.rate = IMAGE_OPERATING_ROTA;
+
+	//プレイヤー画像
+	int playerRes = LoadDivGraph(
+		IMAGE_PLAYER_PATH,
+		PLAYER_DIV_NUM, PLAYER_DIV_YOKO, PLAYER_DIV_TATE,
+		PLAYER_WIDTH, PLAYER_HEIGHT,
+		player.handle);
+
+	if (playerRes == ERR) {
+		MessageBox(GetMainWindowHandle(), IMAGE_PLAYER_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
+		return FALSE;
+	}
+
+	player.x = GAME_WIDTH / 2 - player.x / 2;
+	player.y = GAME_HEIGHT / 2 - player.y / 2;
+	player.speed;
+	player.angle = 0;
+	player.rate = PLAYER_ROTA;
+
+
+	GetGraphSize(player.handle[0], &player.width, &player.height);
 
 	return TRUE;
 }
@@ -521,6 +598,8 @@ VOID MY_DELETE_IMAGE(VOID) {
 	DeleteGraph(ImageTitleBK.handle);
 	DeleteGraph(ImageTitleRogo.image.handle);
 	DeleteGraph(ImageTitleStart.image.handle);
+	DeleteGraph(ImageOperating.image.handle);
+	for (int cnt = 0; cnt < PLAYER_DIV_NUM; cnt++) { DeleteGraph(player.handle[cnt]); }
 }
 
 /*----------音楽読み込み処理----------*/
@@ -548,37 +627,51 @@ VOID MY_DELETE_MUSIC(VOID) {
 	DeleteSoundMem(musicPlay.handle);
 }
 
+/*----------冒頭テキスト表示----------*/
 VOID FIRST_FONT_DRAW() {
-	if (!inGameMain) {
-		DrawBox(fontX - 10, fontY - 10, GAME_WIDTH / 2 + 400, GAME_HEIGHT / 2 +150, GetColor(200, 200, 200), TRUE);
-		DrawString(GAME_WIDTH / 2 + 300, GAME_HEIGHT / 2 + 100, "Enter→", FONT_COLOR_BLACK);
+	DrawBox(fontX - 10, fontY - 10, GAME_WIDTH / 2 + 400, GAME_HEIGHT / 2 +150, GetColor(200, 200, 200), TRUE);
+	DrawString(GAME_WIDTH / 2 + 300, GAME_HEIGHT / 2 + 100, "Enter→", FONT_COLOR_BLACK);
 
-		switch (fontNum)
-		{
-		case 1:
-			DrawString(fontX, fontY, "ギルドから依頼が届きました！", FONT_COLOR_BLACK);
-			break;
-		case 2:
-			DrawString(fontX, fontY, "とあるものを取ってきてほしい、という依頼が届いた。\n厄介なことになぞなぞになっていて、\n依頼の品が何なのかわからない状態だ。", FONT_COLOR_BLACK);
-			break;
-		case 3:
-			DrawString(fontX, fontY, "そこで、あなたには謎を解き指定されたものを届けてほしい。\n聡明なあなたならできるはずだ。", FONT_COLOR_BLACK);
-			break;
-		case 4:
-			DrawString(fontX, fontY, "届いた謎は・・・", FONT_COLOR_BLACK);
-			break;
-		case 5:
-			DrawString(fontX, fontY, """緑と黒の柄をもつ。\n割ると、中から赤い身が飛び散る。\n水に関係しているとか…。""", FONT_COLOR_RED);
-			break;
-		case 6:
-			DrawString(fontX, fontY, "難しいかもしれないが頼んだぞ！", FONT_COLOR_BLACK);
-			break;
-		default:
-			break;
-		}
+	//背景
+	DrawGraph(0, 0, ImageTitleBK.handle, TRUE);
+
+	switch (fontNum)
+	{
+	case 1:
+		DrawString(fontX, fontY, "ギルドから依頼が届きました！", FONT_COLOR_BLACK);
+		break;
+	case 2:
+		DrawString(fontX, fontY, "とあるものを取ってきてほしい、という依頼が届いた。\n厄介なことになぞなぞになっていて、\n依頼の品が何なのかわからない状態だ。", FONT_COLOR_BLACK);
+		break;
+	case 3:
+		DrawString(fontX, fontY, "そこで、あなたには謎を解き指定されたものを届けてほしい。\n聡明なあなたならできるはずだ。", FONT_COLOR_BLACK);
+		break;
+	case 4:
+		DrawString(fontX, fontY, "届いた謎は・・・", FONT_COLOR_BLACK);
+		break;
+	case 5:
+		DrawString(fontX, fontY, """緑と黒の柄をもつ。\n割ると、中から赤い身が飛び散る。\n水に関係しているとか…。""", FONT_COLOR_RED);
+		break;
+	case 6:
+		DrawString(fontX, fontY, "難しいかもしれないが頼んだぞ！", FONT_COLOR_BLACK);
+		break;
+
+	case 7:
+		OPERATING_DRAW();
+		DrawString(GAME_WIDTH - 100, GAME_HEIGHT -50, "Enter→", FONT_COLOR_WHITE);
+		break;
+	default:
+		break;
 	}
 }
 
-VOID OPERETING_DRAW() {
-
+/*----------操作説明----------*/
+VOID OPERATING_DRAW() {
+	DrawRotaGraph(
+		ImageOperating.image.x,
+		ImageOperating.image.y,
+		ImageOperating.rate,
+		ImageOperating.angle,
+		ImageOperating.image.handle,
+		TRUE);
 }
