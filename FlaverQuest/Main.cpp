@@ -26,6 +26,7 @@
 #define	PLAYER_DIV_YOKO		3	//プレイヤー画像横分割数
 #define PLAYER_DIV_NUM		PLAYER_DIV_TATE*PLAYER_DIV_YOKO		//プレイヤー画像総分割数
 #define PLAYER_ROTA			2.0		//プレイヤー拡大率
+#define PLAYER_ACTWAIT		100	//プレイヤーアニメーション待ち時間
 
 //画像
 #define IMAGE_LOAD_ERR_TITLE	TEXT("画像読み込みエラー")		//画像読み込みエラーメッセージ
@@ -124,10 +125,9 @@ typedef struct STRUCT_CHARA
 	int y;
 	int width;
 	int height;
-	BOOL IsDraw;
-	int nowImageKind;
-	int changeImageCnt;
-	int ChangeImageCntMax;
+	int nowImageKind;			//現在のキャラクター状態
+	int changeImageCnt;			//変更したい画像		[0]～[2]：正面　[3]～[5]左	[6]～[8]右	[9]～[11]：背面
+	int ChangeImageCntMax;		//変更したい画像ラスト	例：正面→2		左→5
 	int speed;
 	double angle;
 	double rate;
@@ -333,16 +333,17 @@ VOID MY_PLAY_PROC(VOID)
 			PlaySoundMem(musicPlay.handle, DX_PLAYTYPE_LOOP);			//再生
 		}
 
-		player.nowImageKind = 0;
-		//プレイヤー表示
-		DrawRotaGraph(
-			player.x,
-			player.y,
-			player.rate,
-			player.angle,
-			player.handle[player.nowImageKind],
-			TRUE
-		);
+		//プレイヤー設定
+		if (player.changeImageCnt < player.ChangeImageCntMax) {
+			WaitTimer(PLAYER_ACTWAIT);
+			++player.changeImageCnt;
+			player.nowImageKind = player.changeImageCnt;
+		}
+		else {
+			player.nowImageKind = 6;
+			player.changeImageCnt = 6;
+		}
+		
 
 		//スペースキーを押したら、エンドシーンへ移動する
 	    //if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
@@ -371,6 +372,26 @@ VOID MY_PLAY_DRAW(VOID)
 
 	//メイン部分
 	else {
+		//プレイヤー表示
+		DrawRotaGraph(
+			player.x,
+			player.y,
+			player.rate,
+			player.angle,
+			player.handle[player.nowImageKind],
+			TRUE
+		);
+
+		//デバック
+		DrawRotaGraph(
+			100,
+			100,
+			player.rate,
+			player.angle,
+			player.handle[6],
+			TRUE
+		);
+
 		DrawString(0, 0, "メインゲーム", FONT_COLOR_WHITE);
 	}
 	return;
@@ -586,6 +607,8 @@ BOOL MY_LOAD_IMAGE(VOID) {
 	player.y = GAME_HEIGHT / 2 - player.y / 2;
 	player.speed;
 	player.angle = 0;
+	player.changeImageCnt = 6;
+	player.ChangeImageCntMax = 8;
 	player.rate = PLAYER_ROTA;
 
 
