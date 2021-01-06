@@ -1,5 +1,7 @@
 ﻿/*----------ヘッダーファイル----------*/
 #include "DxLib.h"
+#include "game.h"
+#include "mapChip.h"
 
 /*----------マクロ定義----------*/
 #define GAME_WIDTH	1024	//画面の横の大きさ
@@ -14,10 +16,6 @@
 //FPS設定
 #define GAME_FPS			60	//FPSの数値	
 
-//パスの長さ
-#define PATH_MAX			255	//255文字まで
-#define NAME_MAX			255	//255文字まで
-
 //プレイヤー画像
 #define PLAYER_CHANGE_NUM	3	//プレイヤー画像変更回数
 #define PLAYER_WIDTH	32		//プレイヤー画像横
@@ -27,6 +25,14 @@
 #define PLAYER_DIV_NUM		PLAYER_DIV_TATE*PLAYER_DIV_YOKO		//プレイヤー画像総分割数
 #define PLAYER_ROTA			2.0		//プレイヤー拡大率
 #define PLAYER_ACTWAIT		100	//プレイヤーアニメーション待ち時間
+#define PLAYER_LEFT			3//左向き
+#define PLAYER_LEFT_MAX		5//左最大
+#define PLAYER_RIGHT		6//右向き
+#define	PLAYER_RIGHT_MAX	8//右最大
+#define PLAYER_BACK			9//後ろ向き
+#define PLAYER_BACK_MAX		11//後ろ最大
+#define PLAYER_RIGHT_STAY	7//右向き待ち
+#define PLAYER_LEFT_STAY	4//左向き待ち
 
 //画像
 #define IMAGE_LOAD_ERR_TITLE	TEXT("画像読み込みエラー")		//画像読み込みエラーメッセージ
@@ -128,6 +134,8 @@ typedef struct STRUCT_CHARA
 	int nowImageKind;			//現在のキャラクター状態
 	int changeImageCnt;			//変更したい画像		[0]～[2]：正面　[3]～[5]左	[6]～[8]右	[9]～[11]：背面
 	int ChangeImageCntMax;		//変更したい画像ラスト	例：正面→2		左→5
+	int keyState;
+	int keyStateMax;
 	int speed;
 	double angle;
 	double rate;
@@ -172,6 +180,26 @@ BOOL inGameMain = FALSE;		//判定：ゲーム本編
 BOOL isFontNext = TRUE;		//判定：冒頭テキスト次に進む
 
 CHARA player;
+int playerState = 0;
+long a = 10000000;
+bool isChange = true;
+
+//MAP
+MAP_CHIP mapChip;
+
+MAP map_jimen[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
+MAP mapInit_jimen[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
+
+MAP map_sora[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
+MAP mapInit_sora[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
+
+MAP map_sousyoku[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
+MAP mapInit_sousyoku[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
+
+MAP map_atarihantei[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
+MAP mapInit_atarihantei[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
+
+int mapATARIID[GAME_MAP_ATARI_BATSU];
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -187,8 +215,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	int DrawX = 0;	//表示位置X
 	int DrawY = 0;	//表示位置Y
 
-	SetDrawScreen(DX_SCREEN_BACK);	//Draw系関数は裏画面に描画
-
 	//画像読み込み
 	if (MY_LOAD_IMAGE() == FALSE) { return -1; }
 
@@ -196,6 +222,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if (MY_LOAD_MUSIC() == FALSE) { return -1; }
 
 	GameScene = GAME_SCENE_START;//最初はスタート画面から
+
+	SetDrawScreen(DX_SCREEN_BACK);	//Draw系関数は裏画面に描画
+
+	//マップチップを読み込む
+	if (MY_LOAD_MAPCHIP() == FALSE) { return -1; }
+
+	//CSVを読み込む
+	/*if (MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_SORA, &map_sora[0][0], &mapInit_sora[0][0]) == FALSE) { return -1; }
+	if (MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_JIMEN, &map_jimen[0][0], &mapInit_jimen[0][0]) == FALSE) { return -1; }
+	if (MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_SOUSHOKU, &map_sousyoku[0][0], &mapInit_sousyoku[0][0]) == FALSE) { return -1; }*/
+
+	//文字にアンチエイリアスをかける
+	ChangeFontType(DX_FONTTYPE_ANTIALIASING_8X8);
 
 	//無限ループ
 	while (TRUE)
@@ -205,8 +244,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		if (ClearDrawScreen() != FALSE) { break; }	//画面を消去できなかったとき、強制終了
 
 		MY_FPS_UPDATE();	//FPSの処理[更新]
-		//MY_FPS_DRAW();		//FPSの処理[描画]
-		MY_FPS_WAIT();		//FPSの処理[待つ]
+		
 
 		MY_ALL_KEYDOWN_UPDATE();				//押しているキー状態を取得
 
@@ -223,8 +261,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			MY_END();	//エンド画面
 			break;
 		}
-
+		MY_FPS_DRAW();
 		ScreenFlip();		//モニタのリフレッシュレートの速さで裏画面を再描画
+		MY_FPS_WAIT();		//FPSの処理[待つ]
 	}
 
 	//画像ハンドルを破棄
@@ -304,8 +343,6 @@ VOID MY_PLAY(VOID) {
 
 VOID MY_PLAY_PROC(VOID)
 {
-
-
 	//テキスト冒頭処理
 	if (!inGameMain) {
 		SetFontSize(26);
@@ -334,15 +371,51 @@ VOID MY_PLAY_PROC(VOID)
 		}
 
 		//プレイヤー設定
-		if (player.changeImageCnt < player.ChangeImageCntMax) {
-			WaitTimer(PLAYER_ACTWAIT);
-			++player.changeImageCnt;
-			player.nowImageKind = player.changeImageCnt;
+		if (MY_KEY_DOWN(KEY_INPUT_D) == TRUE) {
+			playerState = 2;
+			
+		}
+		else if (MY_KEY_UP(KEY_INPUT_D) == TRUE) {
+			playerState = 0;
+		}
+		else if (MY_KEY_DOWN(KEY_INPUT_A) == TRUE) {
+			playerState = 3;
+			
+		}
+		else if (MY_KEY_UP(KEY_INPUT_A) == TRUE) {
+			playerState = 1;
 		}
 		else {
-			player.nowImageKind = 6;
-			player.changeImageCnt = 6;
+			;
 		}
+
+		switch (playerState)
+		{
+		case 0:
+			player.keyState = PLAYER_RIGHT_STAY;
+			player.keyStateMax = PLAYER_RIGHT_STAY;
+			player.ChangeImageCntMax = PLAYER_RIGHT_STAY;
+			break;
+		case 1:
+			player.keyState = PLAYER_LEFT_STAY;
+			player.keyStateMax = PLAYER_LEFT_STAY;
+			player.ChangeImageCntMax = PLAYER_LEFT_STAY;
+			break;
+		case 2:
+			player.keyState = PLAYER_RIGHT;
+			player.keyStateMax = PLAYER_RIGHT_MAX;
+			player.ChangeImageCntMax = PLAYER_RIGHT_MAX;
+			break;
+		case 3:
+			player.keyState = PLAYER_LEFT;
+			player.keyStateMax = PLAYER_LEFT_MAX;
+			player.ChangeImageCntMax = PLAYER_LEFT_MAX;
+			break;
+		default:
+			break;
+		}
+
+		
 		
 
 		//スペースキーを押したら、エンドシーンへ移動する
@@ -372,6 +445,48 @@ VOID MY_PLAY_DRAW(VOID)
 
 	//メイン部分
 	else {
+		//MAP表示
+		//マップ下を描画
+		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
+		{
+			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
+			{
+				DrawGraph(
+					map_sora[tate][yoko].x,
+					map_sora[tate][yoko].y,
+					mapChip.handle[map_sora[tate][yoko].value],
+					TRUE);
+			}
+		}
+
+		//マップ中を描画
+		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
+		{
+			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
+			{
+
+				DrawGraph(
+					map_jimen[tate][yoko].x,
+					map_jimen[tate][yoko].y,
+					mapChip.handle[map_jimen[tate][yoko].value],
+					TRUE);
+			}
+		}
+
+		//マップ上を描画
+		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
+		{
+			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
+			{
+				DrawGraph(
+					map_sousyoku[tate][yoko].x,
+					map_sousyoku[tate][yoko].y,
+					mapChip.handle[map_sousyoku[tate][yoko].value],
+					TRUE);
+			}
+		}
+
+
 		//プレイヤー表示
 		DrawRotaGraph(
 			player.x,
@@ -382,15 +497,14 @@ VOID MY_PLAY_DRAW(VOID)
 			TRUE
 		);
 
-		//デバック
-		DrawRotaGraph(
-			100,
-			100,
-			player.rate,
-			player.angle,
-			player.handle[6],
-			TRUE
-		);
+		if (player.changeImageCnt < player.ChangeImageCntMax) {
+			++player.changeImageCnt;
+			player.nowImageKind = player.changeImageCnt;
+		}
+		else {
+			player.nowImageKind = player.keyState;
+			player.changeImageCnt = player.keyState;
+		}
 
 		DrawString(0, 0, "メインゲーム", FONT_COLOR_WHITE);
 	}
@@ -605,10 +719,10 @@ BOOL MY_LOAD_IMAGE(VOID) {
 
 	player.x = GAME_WIDTH / 2 - player.x / 2;
 	player.y = GAME_HEIGHT / 2 - player.y / 2;
-	player.speed;
+	player.speed = 1;
 	player.angle = 0;
-	player.changeImageCnt = 6;
-	player.ChangeImageCntMax = 8;
+	player.changeImageCnt = PLAYER_RIGHT_STAY;
+	player.ChangeImageCntMax = PLAYER_RIGHT_STAY;
 	player.rate = PLAYER_ROTA;
 
 
@@ -652,11 +766,12 @@ VOID MY_DELETE_MUSIC(VOID) {
 
 /*----------冒頭テキスト表示----------*/
 VOID FIRST_FONT_DRAW() {
-	DrawBox(fontX - 10, fontY - 10, GAME_WIDTH / 2 + 400, GAME_HEIGHT / 2 +150, GetColor(200, 200, 200), TRUE);
-	DrawString(GAME_WIDTH / 2 + 300, GAME_HEIGHT / 2 + 100, "Enter→", FONT_COLOR_BLACK);
-
 	//背景
 	DrawGraph(0, 0, ImageTitleBK.handle, TRUE);
+	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 128);
+	DrawBox(fontX - 10, fontY - 10, GAME_WIDTH / 2 + 400, GAME_HEIGHT / 2 + 150, GetColor(200, 200, 200), TRUE);
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
+	DrawString(GAME_WIDTH - 100, GAME_HEIGHT - 50, "Enter→", FONT_COLOR_WHITE);
 
 	switch (fontNum)
 	{
@@ -698,3 +813,54 @@ VOID OPERATING_DRAW() {
 		ImageOperating.image.handle,
 		TRUE);
 }
+
+/*--------MAP---------*/
+BOOL MY_LOAD_MAPCHIP(VOID)
+{
+	int mapRes = LoadDivGraph(
+		GAME_MAP_PATH,
+		MAP_DIV_NUM, MAP_DIV_TATE, MAP_DIV_YOKO,
+		MAP_DIV_WIDTH, MAP_DIV_HEIGHT,
+		&mapChip.handle[0]);
+
+	if (mapRes == -1) {
+		MessageBox(GetMainWindowHandle(), GAME_MAP_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK); 
+		return FALSE;
+	}
+
+	GetGraphSize(mapChip.handle[0], &mapChip.width, &mapChip.height);
+
+	return TRUE;
+}
+
+//BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
+//{
+//	FILE* fp;
+//	errno_t error;
+//	if ((error = fopen_s(&fp,path,"r")) == NULL) {
+//		return FALSE;
+//	}
+//
+//	int result = 0;
+//	for (int tate = 0; tate < GAME_MAP_YOKO_MAX; tate++) {
+//		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
+//			MAP* p = m + tate * GAME_MAP_YOKO_MAX + yoko;
+//
+//			result = fscanf(fp, "%d,", &p->value);
+//
+//			if (result == EOF) { break; }
+//		}
+//		if (result == EOF) { break; }
+//	}
+//
+//	fclose(fp);
+//
+//	/*for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
+//		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
+//			MAP* p = m + tate + GAME_MAP_YOKO_MAX + yoko;
+//			MAP* pInit = mInit + tate * GAME_MAP_YOKO_MAX + yoko;
+//
+//			p->kind = GAME_MAP_JIMEN_NAKA;
+//		}
+//	}*/
+//}
