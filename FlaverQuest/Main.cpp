@@ -196,10 +196,14 @@ MAP mapInit_sora[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 MAP map_sousyoku[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 MAP mapInit_sousyoku[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 
-MAP map_atarihantei[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
-MAP mapInit_atarihantei[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
+int MapKabeID[MAP_KABE_KIND] = {10,11,42,43};
 
-int mapATARIID[GAME_MAP_ATARI_BATSU];
+int MapNoneID = 264;
+int MapKanbanID = 257;
+int MapGuildID1 = 202;
+int MapGuildID2 = 203;
+int MapGuildID3 = 234;
+int MapGuildID4 = 235;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -229,9 +233,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if (MY_LOAD_MAPCHIP() == FALSE) { return -1; }
 
 	//CSVを読み込む
-	/*if (MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_SORA, &map_sora[0][0], &mapInit_sora[0][0]) == FALSE) { return -1; }
+	if (MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_SORA, &map_sora[0][0], &mapInit_sora[0][0]) == FALSE) { return -1; }
 	if (MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_JIMEN, &map_jimen[0][0], &mapInit_jimen[0][0]) == FALSE) { return -1; }
-	if (MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_SOUSHOKU, &map_sousyoku[0][0], &mapInit_sousyoku[0][0]) == FALSE) { return -1; }*/
+	if (MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_SOUSHOKU, &map_sousyoku[0][0], &mapInit_sousyoku[0][0]) == FALSE) { return -1; }
 
 	//文字にアンチエイリアスをかける
 	ChangeFontType(DX_FONTTYPE_ANTIALIASING_8X8);
@@ -833,34 +837,67 @@ BOOL MY_LOAD_MAPCHIP(VOID)
 	return TRUE;
 }
 
-//BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
-//{
-//	FILE* fp;
-//	errno_t error;
-//	if ((error = fopen_s(&fp,path,"r")) == NULL) {
-//		return FALSE;
-//	}
-//
-//	int result = 0;
-//	for (int tate = 0; tate < GAME_MAP_YOKO_MAX; tate++) {
-//		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
-//			MAP* p = m + tate * GAME_MAP_YOKO_MAX + yoko;
-//
-//			result = fscanf(fp, "%d,", &p->value);
-//
-//			if (result == EOF) { break; }
-//		}
-//		if (result == EOF) { break; }
-//	}
-//
-//	fclose(fp);
-//
-//	/*for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
-//		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
-//			MAP* p = m + tate + GAME_MAP_YOKO_MAX + yoko;
-//			MAP* pInit = mInit + tate * GAME_MAP_YOKO_MAX + yoko;
-//
-//			p->kind = GAME_MAP_JIMEN_NAKA;
-//		}
-//	}*/
-//}
+BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
+{
+	FILE* fp;
+	errno_t error;
+	if ((error = fopen_s(&fp,path,"r")) == NULL) {
+		return FALSE;
+	}
+
+	int result = 0;
+	for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
+		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
+			MAP* p = m + tate * GAME_MAP_YOKO_MAX + yoko;
+
+			result = fscanf(fp, "%d,", &p->value);
+
+			if (result == EOF) { break; }
+		}
+		if (result == EOF) { break; }
+	}
+
+	fclose(fp);
+
+	/*for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
+		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
+			MAP* p = m + tate * GAME_MAP_YOKO_MAX + yoko;
+			MAP* pInit = mInit + tate * GAME_MAP_YOKO_MAX + yoko;
+
+			p->kind = MAP_KIND_TURO;
+
+			for (int cnt = 0; cnt < MAP_KABE_KIND; cnt++) {
+				if (p->value == MapKabeID[cnt]) {
+					p->kind = MAP_KIND_KABE;
+					break;
+				}
+			}
+			if (p->value == MapKanbanID) {
+				p->kind = MAP_KIND_KANBAN;
+			}
+
+			if (p->value == MapGuildID1) {
+				p->kind = MAP_KIND_GUILD;
+			}
+
+			if (p->value == MapGuildID2) {
+				p->kind = MAP_KIND_GUILD;
+			}
+			if (p->value == MapGuildID3) {
+				p->kind = MAP_KIND_GUILD;
+			}
+			if (p->value == MapGuildID4) {
+				p->kind = MAP_KIND_GUILD;
+			}
+
+			p->x = yoko * MAP_DIV_WIDTH;
+			p->y = tate * MAP_DIV_HEIGHT;
+			p->width = MAP_DIV_WIDTH;
+			p->height = MAP_DIV_HEIGHT;
+
+			pInit = p;
+		}
+	}*/
+
+
+}
