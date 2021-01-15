@@ -16,13 +16,14 @@
 #define MAP_DIV_WIDTH			32
 #define MAP_DIV_HEIGHT			32
 
-#define MAP_DIV_TATE			10
-#define MAP_DIV_YOKO			16
+#define MAP_DIV_TATE			18  //画像の分割数（マップの使う数じゃない）マップchipのプロパティを表示して大きさを確認して区切るビット数で割った数を入れる
+#define MAP_DIV_YOKO			32
 #define MAP_DIV_NUM	MAP_DIV_TATE * MAP_DIV_YOKO	//マップチップを分割する総数
 
 
 
 enum MAP_KIND {
+     MAP_KIND_SORA,
      MAP_KIND_KABE,
      MAP_KIND_TURO,
      MAP_KIND_NONE,

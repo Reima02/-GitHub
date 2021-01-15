@@ -179,10 +179,11 @@ int fontNum = 1;
 BOOL inGameMain = FALSE;		//判定：ゲーム本編
 BOOL isFontNext = TRUE;		//判定：冒頭テキスト次に進む
 
+//プレイヤー
 CHARA player;
 int playerState = 0;
-long a = 10000000;
 bool isChange = true;
+float playerYspeed = 2;
 
 //MAP
 MAP_CHIP mapChip;
@@ -197,7 +198,7 @@ MAP map_sousyoku[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 MAP mapInit_sousyoku[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 
 int MapKabeID[MAP_KABE_KIND] = {10,11,42,43};
-
+int Sora1ID = 1;
 int MapNoneID = 264;
 int MapKanbanID = 257;
 int MapGuildID1 = 202;
@@ -419,19 +420,19 @@ VOID MY_PLAY_PROC(VOID)
 			break;
 		}
 
-		
+		player.y += playerYspeed;
 		
 
 		//スペースキーを押したら、エンドシーンへ移動する
-	    //if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
-		//{
-		//	//BGM停止
-		//	if (CheckSoundMem(musicPlay.handle) != 0) {
-		//		StopSoundMem(musicPlay.handle);
-		//	}
+	    if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
+		{
+			//BGM停止
+			if (CheckSoundMem(musicPlay.handle) != 0) {
+				StopSoundMem(musicPlay.handle);
+			}
 
-		//	GameScene = GAME_SCENE_END;
-		//}
+			GameScene = GAME_SCENE_END;
+		}
 	}
 
 	
@@ -471,7 +472,7 @@ VOID MY_PLAY_DRAW(VOID)
 
 				DrawGraph(
 					map_jimen[tate][yoko].x,
-					map_jimen[tate][yoko].y,
+					map_jimen[tate][yoko].y-30,
 					mapChip.handle[map_jimen[tate][yoko].value],
 					TRUE);
 			}
@@ -484,7 +485,7 @@ VOID MY_PLAY_DRAW(VOID)
 			{
 				DrawGraph(
 					map_sousyoku[tate][yoko].x,
-					map_sousyoku[tate][yoko].y,
+					map_sousyoku[tate][yoko].y-30,
 					mapChip.handle[map_sousyoku[tate][yoko].value],
 					TRUE);
 			}
@@ -493,8 +494,8 @@ VOID MY_PLAY_DRAW(VOID)
 
 		//プレイヤー表示
 		DrawRotaGraph(
-			player.x,
-			player.y,
+			player.x-450,
+			player.y+120,
 			player.rate,
 			player.angle,
 			player.handle[player.nowImageKind],
@@ -741,6 +742,7 @@ VOID MY_DELETE_IMAGE(VOID) {
 	DeleteGraph(ImageTitleStart.image.handle);
 	DeleteGraph(ImageOperating.image.handle);
 	for (int cnt = 0; cnt < PLAYER_DIV_NUM; cnt++) { DeleteGraph(player.handle[cnt]); }
+	for (int i_num = 0; i_num < MAP_DIV_NUM; i_num++) { DeleteGraph(mapChip.handle[i_num]); }
 }
 
 /*----------音楽読み込み処理----------*/
@@ -823,7 +825,7 @@ BOOL MY_LOAD_MAPCHIP(VOID)
 {
 	int mapRes = LoadDivGraph(
 		GAME_MAP_PATH,
-		MAP_DIV_NUM, MAP_DIV_TATE, MAP_DIV_YOKO,
+		MAP_DIV_NUM, MAP_DIV_YOKO, MAP_DIV_TATE,
 		MAP_DIV_WIDTH, MAP_DIV_HEIGHT,
 		&mapChip.handle[0]);
 
@@ -840,8 +842,8 @@ BOOL MY_LOAD_MAPCHIP(VOID)
 BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
 {
 	FILE* fp;
-	errno_t error;
-	if ((error = fopen_s(&fp,path,"r")) == NULL) {
+
+	if ((fp = fopen(path,"r")) == NULL) {
 		return FALSE;
 	}
 
@@ -859,14 +861,14 @@ BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
 
 	fclose(fp);
 
-	/*for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
+	for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
 		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
 			MAP* p = m + tate * GAME_MAP_YOKO_MAX + yoko;
 			MAP* pInit = mInit + tate * GAME_MAP_YOKO_MAX + yoko;
 
 			p->kind = MAP_KIND_TURO;
 
-			for (int cnt = 0; cnt < MAP_KABE_KIND; cnt++) {
+			/*for (int cnt = 0; cnt < MAP_KABE_KIND; cnt++) {
 				if (p->value == MapKabeID[cnt]) {
 					p->kind = MAP_KIND_KABE;
 					break;
@@ -888,7 +890,7 @@ BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
 			}
 			if (p->value == MapGuildID4) {
 				p->kind = MAP_KIND_GUILD;
-			}
+			}*/
 
 			p->x = yoko * MAP_DIV_WIDTH;
 			p->y = tate * MAP_DIV_HEIGHT;
@@ -897,7 +899,8 @@ BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
 
 			pInit = p;
 		}
-	}*/
+	}
 
+	return TRUE;
 
 }
