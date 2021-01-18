@@ -12,6 +12,7 @@
 #define GAME_MAP_YOKO_MAX		100	//É}ÉbÉvâ°ÇÃçLÇ≥
 
 #define MAP_KABE_KIND 4
+#define MAP_GUILD_KIND 4
 
 #define MAP_DIV_WIDTH			32
 #define MAP_DIV_HEIGHT			32

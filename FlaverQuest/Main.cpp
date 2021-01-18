@@ -94,6 +94,9 @@ VOID MY_DELETE_IMAGE(VOID);		//画像をまとめて削除する関数
 BOOL MY_LOAD_MUSIC(VOID);		//音楽読み込み
 VOID MY_DELETE_MUSIC(VOID);		//音楽削除
 
+//デバック用
+void DrawBoxRect(RECT, unsigned int, bool);
+
 /*----------グローバル変数----------*/
 //シーンの追加
 enum GAME_SCENE {
@@ -140,9 +143,15 @@ typedef struct STRUCT_CHARA
 	double angle;
 	double rate;
 
+	int mapX;	//マップ左上（0）にしたとき、どのくらいのｘ位置にいるか
+	int mapY;	//上のY版
+
 	RECT coll;
 
 }CHARA;	//キャラクター構造体
+
+//当たり判定
+VOID MY_CHECK_MAP_DOWN(CHARA*);
 
 //音楽構造体
 typedef struct STRUCT_MUSIC
@@ -184,6 +193,7 @@ CHARA player;
 int playerState = 0;
 bool isChange = true;
 float playerYspeed = 2;
+int playerStartPosX = 450;
 
 //MAP
 MAP_CHIP mapChip;
@@ -198,13 +208,10 @@ MAP map_sousyoku[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 MAP mapInit_sousyoku[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 
 int MapKabeID[MAP_KABE_KIND] = {10,11,42,43};
+int MapGuildID[MAP_GUILD_KIND] = { 202,203,234,235 };
 int Sora1ID = 1;
 int MapNoneID = 264;
 int MapKanbanID = 257;
-int MapGuildID1 = 202;
-int MapGuildID2 = 203;
-int MapGuildID3 = 234;
-int MapGuildID4 = 235;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -420,9 +427,13 @@ VOID MY_PLAY_PROC(VOID)
 			break;
 		}
 
-		player.y += playerYspeed;
+		//当たり判定
+		//MY_CHECK_MAP_DOWN(&player);
+		player.coll.left = player.x - player.width / 2;
+		player.coll.top = player.y - player.height;
+		player.coll.right = player.coll.left + player.width;
+		player.coll.bottom = player.coll.top + player.height * 2;
 		
-
 		//スペースキーを押したら、エンドシーンへ移動する
 	    if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
 		{
@@ -472,7 +483,7 @@ VOID MY_PLAY_DRAW(VOID)
 
 				DrawGraph(
 					map_jimen[tate][yoko].x,
-					map_jimen[tate][yoko].y-30,
+					map_jimen[tate][yoko].y,
 					mapChip.handle[map_jimen[tate][yoko].value],
 					TRUE);
 			}
@@ -485,7 +496,7 @@ VOID MY_PLAY_DRAW(VOID)
 			{
 				DrawGraph(
 					map_sousyoku[tate][yoko].x,
-					map_sousyoku[tate][yoko].y-30,
+					map_sousyoku[tate][yoko].y,
 					mapChip.handle[map_sousyoku[tate][yoko].value],
 					TRUE);
 			}
@@ -494,8 +505,8 @@ VOID MY_PLAY_DRAW(VOID)
 
 		//プレイヤー表示
 		DrawRotaGraph(
-			player.x-450,
-			player.y+120,
+			player.x,
+			player.y,
 			player.rate,
 			player.angle,
 			player.handle[player.nowImageKind],
@@ -511,7 +522,25 @@ VOID MY_PLAY_DRAW(VOID)
 			player.changeImageCnt = player.keyState;
 		}
 
+		//当たり判定
+		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
+			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
+				switch (map_jimen[tate][yoko].kind) {
+				case MAP_KIND_KABE:
+					DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 0, 255), FALSE);
+					break;
+
+				case MAP_KIND_TURO:
+					DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 255, 0), FALSE);
+					break;
+				}
+			}
+		}
+
 		DrawString(0, 0, "メインゲーム", FONT_COLOR_WHITE);
+
+		
+		DrawBoxRect(player.coll, GetColor(255, 0, 0), FALSE);
 	}
 	return;
 }
@@ -868,34 +897,31 @@ BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
 
 			p->kind = MAP_KIND_TURO;
 
-			/*for (int cnt = 0; cnt < MAP_KABE_KIND; cnt++) {
+			for (int cnt = 0; cnt < MAP_KABE_KIND; cnt++) {
 				if (p->value == MapKabeID[cnt]) {
 					p->kind = MAP_KIND_KABE;
 					break;
 				}
 			}
-			if (p->value == MapKanbanID) {
-				p->kind = MAP_KIND_KANBAN;
-			}
 
-			if (p->value == MapGuildID1) {
-				p->kind = MAP_KIND_GUILD;
-			}
-
-			if (p->value == MapGuildID2) {
-				p->kind = MAP_KIND_GUILD;
-			}
-			if (p->value == MapGuildID3) {
-				p->kind = MAP_KIND_GUILD;
-			}
-			if (p->value == MapGuildID4) {
-				p->kind = MAP_KIND_GUILD;
+			/*for (int cnt = 0; cnt < MAP_GUILD_KIND; cnt++) {
+				if (p->value == MapGuildID[cnt]) {
+					p->kind = MAP_KIND_GUILD;
+					break;
+				}
 			}*/
 
+			//マップ位置処理
 			p->x = yoko * MAP_DIV_WIDTH;
 			p->y = tate * MAP_DIV_HEIGHT;
 			p->width = MAP_DIV_WIDTH;
 			p->height = MAP_DIV_HEIGHT;
+
+			//マップの当たり判定の処理
+			p->coll.left = p->x + 1;
+			p->coll.top = p->y + 1;
+			p->coll.right = p->coll.left + p->width - 1;
+			p->coll.bottom = p->coll.top + p->height - 1;
 
 			pInit = p;
 		}
@@ -903,4 +929,34 @@ BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
 
 	return TRUE;
 
+}
+
+VOID MY_CHECK_MAP_DOWN(CHARA* c) {
+	int charaX_L = (c->mapX) / MAP_DIV_WIDTH;
+	int charaX_R = (c->mapY + c->width) / MAP_DIV_WIDTH;
+	int charaY = (c->mapY + c->height) / MAP_DIV_HEIGHT;
+
+	if (charaX_L < 0) { charaX_L = 0; }
+	if (charaX_R >= GAME_MAP_YOKO_MAX) { charaX_R = GAME_MAP_YOKO_MAX - 1; }
+
+	if (map_jimen[charaY][charaX_L].kind == MAP_KIND_KABE || map_jimen[charaY][charaX_R].kind == MAP_KIND_KABE) {
+		while (map_jimen[charaY][charaX_L].kind==MAP_KIND_KABE||map_jimen[charaY][charaX_R].kind==MAP_KIND_KABE)
+		{
+			c->y--;
+
+			c->mapY--;
+
+			charaY = (c->mapY + c->height) / MAP_DIV_HEIGHT;
+		}
+		
+	}
+	return;
+}
+
+//デバック用RECTを利用して四角を描画
+void DrawBoxRect(RECT r, unsigned int color, bool b)
+{
+	//引数を基に描画
+	DrawBox(r.left, r.top, r.right, r.bottom, color, b);
+	return;
 }
