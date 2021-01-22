@@ -212,6 +212,14 @@ int MapGuildID[MAP_GUILD_KIND] = { 202,203,234,235 };
 int Sora1ID = 1;
 int MapNoneID = 264;
 int MapKanbanID = 257;
+//マップ動かす
+BOOL isMapMove = TRUE;
+int mapYokoKijun;
+int mapYokoLoopStart;
+int mapYokoLoopEnd;
+
+BOOL isStopMapLeft = TRUE;
+BOOL isStopMapRight = TRUE;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -344,6 +352,7 @@ VOID MY_START_DRAW(VOID)
 		TRUE);
 
 	DrawString(0, 0, "スタート画面", GetColor(255, 255, 255));
+
 	return;
 }
 
@@ -428,7 +437,7 @@ VOID MY_PLAY_PROC(VOID)
 		}
 
 		//当たり判定
-		//MY_CHECK_MAP_DOWN(&player);
+		MY_CHECK_MAP_DOWN(&player);
 		player.coll.left = player.x - player.width / 2;
 		player.coll.top = player.y - player.height;
 		player.coll.right = player.coll.left + player.width;
@@ -461,89 +470,155 @@ VOID MY_PLAY_DRAW(VOID)
 
 	//メイン部分
 	else {
-		//MAP表示
-		//マップ下を描画
-		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
+		//マップを動かせるとき
+		if (isMapMove == TRUE)
 		{
-			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
+			//左入力
+			if (MY_KEY_DOWN(KEY_INPUT_A) == TRUE)
 			{
-				DrawGraph(
-					map_sora[tate][yoko].x,
-					map_sora[tate][yoko].y,
-					mapChip.handle[map_sora[tate][yoko].value],
-					TRUE);
-			}
-		}
+				//左に行けるとき
+				if (isStopMapLeft == TRUE) {
+					for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
+					{
+						for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
+						{
+							//マップ移動
+							map_sora[tate][yoko].x += player.speed;
+							map_jimen[tate][yoko].x += player.speed;
+							map_sousyoku[tate][yoko].x += player.speed;
 
-		//マップ中を描画
-		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
-		{
-			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
-			{
-
-				DrawGraph(
-					map_jimen[tate][yoko].x,
-					map_jimen[tate][yoko].y,
-					mapChip.handle[map_jimen[tate][yoko].value],
-					TRUE);
-			}
-		}
-
-		//マップ上を描画
-		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
-		{
-			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
-			{
-				DrawGraph(
-					map_sousyoku[tate][yoko].x,
-					map_sousyoku[tate][yoko].y,
-					mapChip.handle[map_sousyoku[tate][yoko].value],
-					TRUE);
-			}
-		}
-
-
-		//プレイヤー表示
-		DrawRotaGraph(
-			player.x,
-			player.y,
-			player.rate,
-			player.angle,
-			player.handle[player.nowImageKind],
-			TRUE
-		);
-
-		if (player.changeImageCnt < player.ChangeImageCntMax) {
-			++player.changeImageCnt;
-			player.nowImageKind = player.changeImageCnt;
-		}
-		else {
-			player.nowImageKind = player.keyState;
-			player.changeImageCnt = player.keyState;
-		}
-
-		//当たり判定
-		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
-			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
-				switch (map_jimen[tate][yoko].kind) {
-				case MAP_KIND_KABE:
-					DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 0, 255), FALSE);
-					break;
-
-				case MAP_KIND_TURO:
-					DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 255, 0), FALSE);
-					break;
+							//当たり判定移動
+							map_jimen[tate][yoko].coll.left += player.speed;
+							map_jimen[tate][yoko].coll.right += player.speed;
+						}
+					}
 				}
 			}
+
+			//右入力
+			if (MY_KEY_DOWN(KEY_INPUT_D) == TRUE)
+			{
+				//右に動かせるとき
+				if (isStopMapRight == TRUE)
+				{
+					for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
+					{
+						for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
+						{
+							//マップ移動
+							map_sora[tate][yoko].x -= player.speed;
+							map_jimen[tate][yoko].x -= player.speed;
+							map_sousyoku[tate][yoko].x -= player.speed;
+
+							//当たり判定移動
+							map_jimen[tate][yoko].coll.left -= player.speed;
+							map_jimen[tate][yoko].coll.right -= player.speed;
+						}
+					}
+					}
+				}
+			}
+
+			//マップの基準
+			mapYokoKijun = player.mapX / MAP_DIV_WIDTH;
+			mapYokoLoopStart = mapYokoKijun - GAME_YOKO_CENTER;
+			mapYokoLoopEnd = mapYokoKijun + GAME_YOKO_CENTER + 1;
+
+			//マップの端は固定（領域設定）
+			if (mapYokoLoopStart < 0) { mapYokoLoopStart = 0; mapYokoLoopEnd = GAME_YOKO_CENTER * 2; }
+			if (mapYokoLoopStart > GAME_MAP_YOKO_MAX) { mapYokoLoopStart = GAME_MAP_YOKO_MAX - GAME_YOKO_CENTER * 2; mapYokoLoopEnd = GAME_MAP_YOKO_MAX + 1; }
+
+			//MAP表示
+			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
+			{
+				for (int yoko = mapYokoLoopStart; yoko < GAME_MAP_YOKO_MAX; yoko++)
+				{
+					//空（下）
+					DrawGraph(
+						map_sora[tate][yoko].x,
+						map_sora[tate][yoko].y,
+						mapChip.handle[map_sora[tate][yoko].value],
+						TRUE);
+
+
+				}
+			}
+
+			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
+			{
+				for (int yoko = mapYokoLoopStart; yoko < GAME_MAP_YOKO_MAX; yoko++)
+				{
+
+
+					//地面（中）
+					DrawGraph(
+						map_jimen[tate][yoko].x,
+						map_jimen[tate][yoko].y,
+						mapChip.handle[map_jimen[tate][yoko].value],
+						TRUE);
+
+
+				}
+			}
+
+			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
+			{
+				for (int yoko = mapYokoLoopStart; yoko < GAME_MAP_YOKO_MAX; yoko++)
+				{
+
+
+					//装飾(上)
+					DrawGraph(
+						map_sousyoku[tate][yoko].x,
+						map_sousyoku[tate][yoko].y,
+						mapChip.handle[map_sousyoku[tate][yoko].value],
+						TRUE);
+				}
+			}
+
+			//プレイヤー表示
+			DrawRotaGraph(
+				player.x,
+				player.y,
+				player.rate,
+				player.angle,
+				player.handle[player.nowImageKind],
+				TRUE
+			);
+
+			if (player.changeImageCnt < player.ChangeImageCntMax) {
+				++player.changeImageCnt;
+				player.nowImageKind = player.changeImageCnt;
+			}
+			else {
+				player.nowImageKind = player.keyState;
+				player.changeImageCnt = player.keyState;
+			}
+
+			//デバック用（当たり判定表示）
+			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
+				for (int yoko = mapYokoLoopStart; yoko < mapYokoLoopEnd; yoko++) {
+					switch (map_jimen[tate][yoko].kind) {
+					case MAP_KIND_KABE:
+						DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 0, 255), FALSE);
+						break;
+
+					case MAP_KIND_TURO:
+						DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 255, 0), FALSE);
+						break;
+					}
+				}
+			}
+
+			DrawBoxRect(player.coll, GetColor(255, 0, 0), FALSE);
+
+
+			DrawString(0, 0, "メインゲーム", FONT_COLOR_WHITE);
 		}
-
-		DrawString(0, 0, "メインゲーム", FONT_COLOR_WHITE);
-
-		
-		DrawBoxRect(player.coll, GetColor(255, 0, 0), FALSE);
+		return;
 	}
-	return;
-}
+
+
 
 /*----------エンド画面----------*/
 VOID MY_END(VOID)
@@ -904,12 +979,17 @@ BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
 				}
 			}
 
-			/*for (int cnt = 0; cnt < MAP_GUILD_KIND; cnt++) {
+			for (int cnt = 0; cnt < MAP_GUILD_KIND; cnt++) {
 				if (p->value == MapGuildID[cnt]) {
 					p->kind = MAP_KIND_GUILD;
 					break;
 				}
-			}*/
+			}
+
+			if (p->value == MapKanbanID)
+			{
+				p->kind = MAP_KIND_KANBAN;
+			}
 
 			//マップ位置処理
 			p->x = yoko * MAP_DIV_WIDTH;

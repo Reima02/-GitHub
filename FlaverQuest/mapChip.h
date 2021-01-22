@@ -21,7 +21,7 @@
 #define MAP_DIV_YOKO			32
 #define MAP_DIV_NUM	MAP_DIV_TATE * MAP_DIV_YOKO	//マップチップを分割する総数
 
-
+#define GAME_YOKO_CENTER    15
 
 enum MAP_KIND {
      MAP_KIND_SORA,
