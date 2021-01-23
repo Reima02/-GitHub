@@ -69,6 +69,7 @@ VOID MY_PLAY_DRAW(VOID);	//プレイ画面の描画
 VOID MY_PLAY_RESET(VOID);	//プレイ画面の初期化
 VOID FIRST_FONT_DRAW(VOID);	//冒頭テキスト表示
 VOID OPERATING_DRAW(VOID);	//操作方法表示
+VOID PLAYER_SETTING(VOID);	//プレイヤー設定（PROC内）　モーション切り替えなど
 
 //エンド画面
 VOID MY_END(VOID);			//エンド画面
@@ -392,49 +393,7 @@ VOID MY_PLAY_PROC(VOID)
 		}
 
 		//プレイヤー設定
-		if (MY_KEY_DOWN(KEY_INPUT_D) == TRUE) {
-			playerState = 2;
-			
-		}
-		else if (MY_KEY_UP(KEY_INPUT_D) == TRUE) {
-			playerState = 0;
-		}
-		else if (MY_KEY_DOWN(KEY_INPUT_A) == TRUE) {
-			playerState = 3;
-			
-		}
-		else if (MY_KEY_UP(KEY_INPUT_A) == TRUE) {
-			playerState = 1;
-		}
-		else {
-			;
-		}
-
-		switch (playerState)
-		{
-		case 0:
-			player.keyState = PLAYER_RIGHT_STAY;
-			player.keyStateMax = PLAYER_RIGHT_STAY;
-			player.ChangeImageCntMax = PLAYER_RIGHT_STAY;
-			break;
-		case 1:
-			player.keyState = PLAYER_LEFT_STAY;
-			player.keyStateMax = PLAYER_LEFT_STAY;
-			player.ChangeImageCntMax = PLAYER_LEFT_STAY;
-			break;
-		case 2:
-			player.keyState = PLAYER_RIGHT;
-			player.keyStateMax = PLAYER_RIGHT_MAX;
-			player.ChangeImageCntMax = PLAYER_RIGHT_MAX;
-			break;
-		case 3:
-			player.keyState = PLAYER_LEFT;
-			player.keyStateMax = PLAYER_LEFT_MAX;
-			player.ChangeImageCntMax = PLAYER_LEFT_MAX;
-			break;
-		default:
-			break;
-		}
+		PLAYER_SETTING();
 
 		//当たり判定
 		MY_CHECK_MAP_DOWN(&player);
@@ -455,9 +414,55 @@ VOID MY_PLAY_PROC(VOID)
 		}
 	}
 
-	
-
 	return;
+}
+
+/*----------プレイヤー設定----------*/
+VOID PLAYER_SETTING()
+{
+	if (MY_KEY_DOWN(KEY_INPUT_D) == TRUE) {
+		playerState = 2;
+
+	}
+	else if (MY_KEY_UP(KEY_INPUT_D) == TRUE) {
+		playerState = 0;
+	}
+	else if (MY_KEY_DOWN(KEY_INPUT_A) == TRUE) {
+		playerState = 3;
+
+	}
+	else if (MY_KEY_UP(KEY_INPUT_A) == TRUE) {
+		playerState = 1;
+	}
+	else {
+		;
+	}
+
+	switch (playerState)
+	{
+	case 0:
+		player.keyState = PLAYER_RIGHT_STAY;
+		player.keyStateMax = PLAYER_RIGHT_STAY;
+		player.ChangeImageCntMax = PLAYER_RIGHT_STAY;
+		break;
+	case 1:
+		player.keyState = PLAYER_LEFT_STAY;
+		player.keyStateMax = PLAYER_LEFT_STAY;
+		player.ChangeImageCntMax = PLAYER_LEFT_STAY;
+		break;
+	case 2:
+		player.keyState = PLAYER_RIGHT;
+		player.keyStateMax = PLAYER_RIGHT_MAX;
+		player.ChangeImageCntMax = PLAYER_RIGHT_MAX;
+		break;
+	case 3:
+		player.keyState = PLAYER_LEFT;
+		player.keyStateMax = PLAYER_LEFT_MAX;
+		player.ChangeImageCntMax = PLAYER_LEFT_MAX;
+		break;
+	default:
+		break;
+	}
 }
 
 //プレイ画面の描画
@@ -515,7 +520,23 @@ VOID MY_PLAY_DRAW(VOID)
 							map_jimen[tate][yoko].coll.right -= player.speed;
 						}
 					}
-					}
+
+				}
+			}
+
+			//マップ下
+			for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
+			{
+				for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
+				{
+					//マップ移動
+					map_sora[tate][yoko].y -= player.speed;
+					map_jimen[tate][yoko].y -= player.speed;
+					map_sousyoku[tate][yoko].y -= player.speed;
+
+					//当たり判定移動
+					map_jimen[tate][yoko].coll.top -= player.speed;
+					map_jimen[tate][yoko].coll.bottom -= player.speed;
 				}
 			}
 
@@ -531,7 +552,7 @@ VOID MY_PLAY_DRAW(VOID)
 			//MAP表示
 			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
 			{
-				for (int yoko = mapYokoLoopStart; yoko < GAME_MAP_YOKO_MAX; yoko++)
+				for (int yoko = mapYokoLoopStart; yoko < mapYokoLoopEnd; yoko++)
 				{
 					//空（下）
 					DrawGraph(
@@ -540,32 +561,12 @@ VOID MY_PLAY_DRAW(VOID)
 						mapChip.handle[map_sora[tate][yoko].value],
 						TRUE);
 
-
-				}
-			}
-
-			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
-			{
-				for (int yoko = mapYokoLoopStart; yoko < GAME_MAP_YOKO_MAX; yoko++)
-				{
-
-
 					//地面（中）
 					DrawGraph(
 						map_jimen[tate][yoko].x,
 						map_jimen[tate][yoko].y,
 						mapChip.handle[map_jimen[tate][yoko].value],
 						TRUE);
-
-
-				}
-			}
-
-			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
-			{
-				for (int yoko = mapYokoLoopStart; yoko < GAME_MAP_YOKO_MAX; yoko++)
-				{
-
 
 					//装飾(上)
 					DrawGraph(
@@ -617,7 +618,7 @@ VOID MY_PLAY_DRAW(VOID)
 		}
 		return;
 	}
-
+}
 
 
 /*----------エンド画面----------*/
