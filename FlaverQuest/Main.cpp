@@ -95,6 +95,11 @@ VOID MY_DELETE_IMAGE(VOID);		//画像をまとめて削除する関数
 BOOL MY_LOAD_MUSIC(VOID);		//音楽読み込み
 VOID MY_DELETE_MUSIC(VOID);		//音楽削除
 
+//当たり判定
+BOOL MY_CHECK_RECT_COLL(RECT, RECT);
+
+VOID MY_MAP_DOWN(VOID);
+
 //デバック用
 void DrawBoxRect(RECT, unsigned int, bool);
 
@@ -208,13 +213,14 @@ MAP mapInit_sora[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 MAP map_sousyoku[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 MAP mapInit_sousyoku[GAME_MAP_TATE_MAX][GAME_MAP_YOKO_MAX];
 
-int MapKabeID[MAP_KABE_KIND] = {10,11,42,43};
+int MapKabeID[MAP_KABE_KIND] = { 10,11,42,43 };
 int MapGuildID[MAP_GUILD_KIND] = { 202,203,234,235 };
 int Sora1ID = 1;
 int MapNoneID = 264;
 int MapKanbanID = 257;
 //マップ動かす
 BOOL isMapMove = TRUE;
+BOOL isMapDown = TRUE;
 int mapYokoKijun;
 int mapYokoLoopStart;
 int mapYokoLoopEnd;
@@ -265,7 +271,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		if (ClearDrawScreen() != FALSE) { break; }	//画面を消去できなかったとき、強制終了
 
 		MY_FPS_UPDATE();	//FPSの処理[更新]
-		
+
 
 		MY_ALL_KEYDOWN_UPDATE();				//押しているキー状態を取得
 
@@ -401,9 +407,9 @@ VOID MY_PLAY_PROC(VOID)
 		player.coll.top = player.y - player.height;
 		player.coll.right = player.coll.left + player.width;
 		player.coll.bottom = player.coll.top + player.height * 2;
-		
+
 		//スペースキーを押したら、エンドシーンへ移動する
-	    if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
+		if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
 		{
 			//BGM停止
 			if (CheckSoundMem(musicPlay.handle) != 0) {
@@ -524,20 +530,30 @@ VOID MY_PLAY_DRAW(VOID)
 				}
 			}
 
-			//マップ下
+			
+
+			//当たり判定処理(着地)
 			for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
 			{
 				for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
 				{
-					//マップ移動
-					map_sora[tate][yoko].y -= player.speed;
-					map_jimen[tate][yoko].y -= player.speed;
-					map_sousyoku[tate][yoko].y -= player.speed;
-
-					//当たり判定移動
-					map_jimen[tate][yoko].coll.top -= player.speed;
-					map_jimen[tate][yoko].coll.bottom -= player.speed;
+					if (MY_CHECK_RECT_COLL(player.coll,map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
+					{
+						//着地判定がTRUEの時マップを動かさない
+						isMapDown = FALSE;
+						break;
+					}
+					//着地してないとき重力を加える（マップを下に動かす）
+					if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.coll, map_jimen[tate][yoko].coll) == TRUE) {
+						isMapDown = TRUE;
+					}
 				}
+			}
+
+			//TRUEの時マップを下に動かす
+			if (isMapDown)
+			{
+				MY_MAP_DOWN();
 			}
 
 			//マップの基準
@@ -619,6 +635,27 @@ VOID MY_PLAY_DRAW(VOID)
 		return;
 	}
 }
+
+//マップを下に動かす(重力)
+VOID MY_MAP_DOWN(VOID)
+{
+	//マップ下
+	for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
+	{
+		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
+		{
+			//マップ移動
+			map_sora[tate][yoko].y -= player.speed;
+			map_jimen[tate][yoko].y -= player.speed;
+			map_sousyoku[tate][yoko].y -= player.speed;
+
+			//当たり判定移動
+			map_jimen[tate][yoko].coll.top -= player.speed;
+			map_jimen[tate][yoko].coll.bottom -= player.speed;
+		}
+	}
+}
+
 
 
 /*----------エンド画面----------*/
@@ -807,7 +844,7 @@ BOOL MY_LOAD_IMAGE(VOID) {
 	strcpy_s(ImageOperating.image.path, IMAGE_OPERATING_PATH);
 	ImageOperating.image.handle = LoadGraph(ImageOperating.image.path);
 	if (ImageOperating.image.handle == ERR) {
-		MessageBox(GetMainWindowHandle(), IMAGE_OPERATING_PATH, IMAGE_LOAD_ERR_TITLE,MB_OK);
+		MessageBox(GetMainWindowHandle(), IMAGE_OPERATING_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
 		return FALSE;
 	}
 	ImageOperating.image.x = GAME_WIDTH / 2 - ImageOperating.image.x / 2;
@@ -856,7 +893,7 @@ BOOL MY_LOAD_MUSIC(VOID) {
 	strcpy_s(musicStart.path, MUSIC_START_PATH);
 	musicStart.handle = LoadSoundMem(musicStart.path);
 	if (musicStart.handle == ERR) {
-		MessageBox(GetMainWindowHandle(), MUSIC_START_PATH,MUSIC_LOAD_ERR_TITLE , MB_OK);
+		MessageBox(GetMainWindowHandle(), MUSIC_START_PATH, MUSIC_LOAD_ERR_TITLE, MB_OK);
 		return FALSE;
 	}
 
@@ -907,7 +944,7 @@ VOID FIRST_FONT_DRAW() {
 
 	case 7:
 		OPERATING_DRAW();
-		DrawString(GAME_WIDTH - 100, GAME_HEIGHT -50, "Enter→", FONT_COLOR_WHITE);
+		DrawString(GAME_WIDTH - 100, GAME_HEIGHT - 50, "Enter→", FONT_COLOR_WHITE);
 		break;
 	default:
 		break;
@@ -935,7 +972,7 @@ BOOL MY_LOAD_MAPCHIP(VOID)
 		&mapChip.handle[0]);
 
 	if (mapRes == -1) {
-		MessageBox(GetMainWindowHandle(), GAME_MAP_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK); 
+		MessageBox(GetMainWindowHandle(), GAME_MAP_PATH, IMAGE_LOAD_ERR_TITLE, MB_OK);
 		return FALSE;
 	}
 
@@ -948,7 +985,7 @@ BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
 {
 	FILE* fp;
 
-	if ((fp = fopen(path,"r")) == NULL) {
+	if ((fp = fopen(path, "r")) == NULL) {
 		return FALSE;
 	}
 
@@ -1021,7 +1058,7 @@ VOID MY_CHECK_MAP_DOWN(CHARA* c) {
 	if (charaX_R >= GAME_MAP_YOKO_MAX) { charaX_R = GAME_MAP_YOKO_MAX - 1; }
 
 	if (map_jimen[charaY][charaX_L].kind == MAP_KIND_KABE || map_jimen[charaY][charaX_R].kind == MAP_KIND_KABE) {
-		while (map_jimen[charaY][charaX_L].kind==MAP_KIND_KABE||map_jimen[charaY][charaX_R].kind==MAP_KIND_KABE)
+		while (map_jimen[charaY][charaX_L].kind == MAP_KIND_KABE || map_jimen[charaY][charaX_R].kind == MAP_KIND_KABE)
 		{
 			c->y--;
 
@@ -1029,9 +1066,21 @@ VOID MY_CHECK_MAP_DOWN(CHARA* c) {
 
 			charaY = (c->mapY + c->height) / MAP_DIV_HEIGHT;
 		}
-		
+
 	}
 	return;
+}
+
+BOOL MY_CHECK_RECT_COLL(RECT a, RECT b)
+{
+	if (a.left < b.right &&
+		a.top < b.bottom &&
+		a.right > b.left &&
+		a.bottom > b.top)
+	{
+		return TRUE;
+	}
+	return FALSE;
 }
 
 //デバック用RECTを利用して四角を描画
