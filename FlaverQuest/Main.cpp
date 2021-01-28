@@ -97,7 +97,12 @@ VOID MY_DELETE_MUSIC(VOID);		//音楽削除
 
 //当たり判定
 BOOL MY_CHECK_RECT_COLL(RECT, RECT);
+VOID MY_CHECK_DOWN(int, int);		//当たり判定（下）
+VOID MY_CHECK_RIGHT(int, int);		//当たり判定（右）
+VOID MY_CHECK_LEFT(int, int);		//当たり判定（左）
+VOID MY_CHECK_TOP(int, int);		//当たり判定（上）
 
+//重力を下に動かす
 VOID MY_MAP_DOWN(VOID);
 
 //デバック用
@@ -149,15 +154,14 @@ typedef struct STRUCT_CHARA
 	double angle;
 	double rate;
 
-	int mapX;	//マップ左上（0）にしたとき、どのくらいのｘ位置にいるか
-	int mapY;	//上のY版
-
 	RECT coll;
+	RECT collTop;
+	RECT collBottom;
+	RECT collRight;
+	RECT collLeft;
 
 }CHARA;	//キャラクター構造体
 
-//当たり判定
-VOID MY_CHECK_MAP_DOWN(CHARA*);
 
 //音楽構造体
 typedef struct STRUCT_MUSIC
@@ -218,15 +222,16 @@ int MapGuildID[MAP_GUILD_KIND] = { 202,203,234,235 };
 int Sora1ID = 1;
 int MapNoneID = 264;
 int MapKanbanID = 257;
+
 //マップ動かす
-BOOL isMapMove = TRUE;
-BOOL isMapDown = TRUE;
+BOOL isMapMove = TRUE;	//横移動可能なとき
+BOOL isMapDown = TRUE;	//重力で落ちていくかどうか
 int mapYokoKijun;
 int mapYokoLoopStart;
 int mapYokoLoopEnd;
 
-BOOL isStopMapLeft = TRUE;
-BOOL isStopMapRight = TRUE;
+BOOL isMoveMapLeft = TRUE;
+BOOL isMoveMapRight = TRUE;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -327,6 +332,7 @@ VOID MY_START_PROC(VOID)
 		if (CheckSoundMem(musicStart.handle) != 0) {
 			StopSoundMem(musicStart.handle);
 		}
+		inGameMain = FALSE;
 		GameScene = GAME_SCENE_PLAY;
 	}
 
@@ -401,12 +407,36 @@ VOID MY_PLAY_PROC(VOID)
 		//プレイヤー設定
 		PLAYER_SETTING();
 
-		//当たり判定
-		MY_CHECK_MAP_DOWN(&player);
+		//当たり判定(計算)
+		//全体
 		player.coll.left = player.x - player.width / 2;
 		player.coll.top = player.y - player.height;
 		player.coll.right = player.coll.left + player.width;
 		player.coll.bottom = player.coll.top + player.height * 2;
+
+		//プレイヤー上
+		player.collTop.left = player.x - player.width / 2 + 7;
+		player.collTop.top = player.y - player.height;
+		player.collTop.right = player.coll.left + player.width - 7;
+		player.collTop.bottom = player.coll.top + player.height / 2;
+
+		//プレイヤー下
+		player.collBottom.left = player.x - player.width / 2 + 7;
+		player.collBottom.top = player.y + player.height / 2;
+		player.collBottom.right = player.coll.left + player.width - 7;
+		player.collBottom.bottom = player.coll.top + player.height * 2;
+
+		//プレイヤー右
+		player.collRight.left = player.x + player.width / 4;
+		player.collRight.top = player.y - player.height + 7;
+		player.collRight.right = player.coll.left + player.width;
+		player.collRight.bottom = player.coll.top + player.height * 2 - 7;
+
+		//プレイヤー左
+		player.collLeft.left = player.x - player.width / 2;
+		player.collLeft.top = player.y - player.height + 7;
+		player.collLeft.right = player.coll.left + player.width / 4;
+		player.collLeft.bottom = player.coll.top + player.height * 2 - 7;
 
 		//スペースキーを押したら、エンドシーンへ移動する
 		if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
@@ -480,7 +510,8 @@ VOID MY_PLAY_DRAW(VOID)
 	}
 
 	//メイン部分
-	else {
+	else 
+	{
 		//マップを動かせるとき
 		if (isMapMove == TRUE)
 		{
@@ -488,7 +519,7 @@ VOID MY_PLAY_DRAW(VOID)
 			if (MY_KEY_DOWN(KEY_INPUT_A) == TRUE)
 			{
 				//左に行けるとき
-				if (isStopMapLeft == TRUE) {
+				if (isMoveMapLeft == TRUE) {
 					for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
 					{
 						for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
@@ -510,7 +541,7 @@ VOID MY_PLAY_DRAW(VOID)
 			if (MY_KEY_DOWN(KEY_INPUT_D) == TRUE)
 			{
 				//右に動かせるとき
-				if (isStopMapRight == TRUE)
+				if (isMoveMapRight == TRUE)
 				{
 					for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
 					{
@@ -530,23 +561,14 @@ VOID MY_PLAY_DRAW(VOID)
 				}
 			}
 
-			
-
-			//当たり判定処理(着地)
+			//当たり判定処理
 			for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
 			{
 				for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
 				{
-					if (MY_CHECK_RECT_COLL(player.coll,map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
-					{
-						//着地判定がTRUEの時マップを動かさない
-						isMapDown = FALSE;
-						break;
-					}
-					//着地してないとき重力を加える（マップを下に動かす）
-					if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.coll, map_jimen[tate][yoko].coll) == TRUE) {
-						isMapDown = TRUE;
-					}
+					MY_CHECK_DOWN(tate,yoko);	//キャラクター：マップ　（下）
+					MY_CHECK_RIGHT(tate,yoko);	//キャラクター：マップ　（右）
+					MY_CHECK_LEFT(tate, yoko);	//キャラクター：マップ　（左）
 				}
 			}
 
@@ -556,19 +578,10 @@ VOID MY_PLAY_DRAW(VOID)
 				MY_MAP_DOWN();
 			}
 
-			//マップの基準
-			mapYokoKijun = player.mapX / MAP_DIV_WIDTH;
-			mapYokoLoopStart = mapYokoKijun - GAME_YOKO_CENTER;
-			mapYokoLoopEnd = mapYokoKijun + GAME_YOKO_CENTER + 1;
-
-			//マップの端は固定（領域設定）
-			if (mapYokoLoopStart < 0) { mapYokoLoopStart = 0; mapYokoLoopEnd = GAME_YOKO_CENTER * 2; }
-			if (mapYokoLoopStart > GAME_MAP_YOKO_MAX) { mapYokoLoopStart = GAME_MAP_YOKO_MAX - GAME_YOKO_CENTER * 2; mapYokoLoopEnd = GAME_MAP_YOKO_MAX + 1; }
-
 			//MAP表示
 			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
 			{
-				for (int yoko = mapYokoLoopStart; yoko < mapYokoLoopEnd; yoko++)
+				for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
 				{
 					//空（下）
 					DrawGraph(
@@ -583,7 +596,7 @@ VOID MY_PLAY_DRAW(VOID)
 						map_jimen[tate][yoko].y,
 						mapChip.handle[map_jimen[tate][yoko].value],
 						TRUE);
-
+					
 					//装飾(上)
 					DrawGraph(
 						map_sousyoku[tate][yoko].x,
@@ -614,7 +627,7 @@ VOID MY_PLAY_DRAW(VOID)
 
 			//デバック用（当たり判定表示）
 			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
-				for (int yoko = mapYokoLoopStart; yoko < mapYokoLoopEnd; yoko++) {
+				for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
 					switch (map_jimen[tate][yoko].kind) {
 					case MAP_KIND_KABE:
 						DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 0, 255), FALSE);
@@ -628,6 +641,10 @@ VOID MY_PLAY_DRAW(VOID)
 			}
 
 			DrawBoxRect(player.coll, GetColor(255, 0, 0), FALSE);
+			DrawBoxRect(player.collTop, GetColor(0, 0, 0), FALSE);
+			DrawBoxRect(player.collBottom, GetColor(255, 255, 0), FALSE);
+			DrawBoxRect(player.collLeft, GetColor(255, 0, 255), FALSE);
+			DrawBoxRect(player.collRight, GetColor(255, 255, 255), FALSE);
 
 
 			DrawString(0, 0, "メインゲーム", FONT_COLOR_WHITE);
@@ -656,7 +673,53 @@ VOID MY_MAP_DOWN(VOID)
 	}
 }
 
+//当たり判定（下）　引数：マップ配列の添え字
+VOID MY_CHECK_DOWN(int tate, int yoko)
+{
+	//当たり判定下
+	if (MY_CHECK_RECT_COLL(player.collBottom, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
+	{
+		//着地判定がTRUEの時マップを動かさない
+		isMapDown = FALSE;
+	}
+	//着地してないとき重力を加える（マップを下に動かす）
+	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collBottom, map_jimen[tate][yoko].coll) == TRUE) {
+		isMapDown = TRUE;
+	}
+}
 
+//当たり判定（上）　引数：マップ配列の添え字
+VOID MY_CHECK_TOP(int tate, int yoko)
+{
+	if (MY_CHECK_RECT_COLL(player.collTop, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
+	{
+		;
+	}
+}
+
+//当たり判定（右）　引数：マップ配列の添え字
+VOID MY_CHECK_RIGHT(int tate, int yoko)
+{
+	if (MY_CHECK_RECT_COLL(player.collRight, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
+	{
+		isMoveMapRight = FALSE;
+	}
+	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collRight, map_jimen[tate][yoko].coll) == TRUE) {
+		isMoveMapRight = TRUE;
+	}
+}
+
+//当たり判定（左）　引数：マップ配列の添え字
+VOID MY_CHECK_LEFT(int tate, int yoko)
+{
+	if (MY_CHECK_RECT_COLL(player.collLeft, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
+	{
+		isMoveMapLeft = FALSE;
+	}
+	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collLeft, map_jimen[tate][yoko].coll) == TRUE) {
+		isMoveMapLeft = TRUE;
+	}
+}
 
 /*----------エンド画面----------*/
 VOID MY_END(VOID)
@@ -1047,28 +1110,6 @@ BOOL MY_LOAD_CSV_MAP(const char* path, MAP* m, MAP* mInit)
 
 	return TRUE;
 
-}
-
-VOID MY_CHECK_MAP_DOWN(CHARA* c) {
-	int charaX_L = (c->mapX) / MAP_DIV_WIDTH;
-	int charaX_R = (c->mapY + c->width) / MAP_DIV_WIDTH;
-	int charaY = (c->mapY + c->height) / MAP_DIV_HEIGHT;
-
-	if (charaX_L < 0) { charaX_L = 0; }
-	if (charaX_R >= GAME_MAP_YOKO_MAX) { charaX_R = GAME_MAP_YOKO_MAX - 1; }
-
-	if (map_jimen[charaY][charaX_L].kind == MAP_KIND_KABE || map_jimen[charaY][charaX_R].kind == MAP_KIND_KABE) {
-		while (map_jimen[charaY][charaX_L].kind == MAP_KIND_KABE || map_jimen[charaY][charaX_R].kind == MAP_KIND_KABE)
-		{
-			c->y--;
-
-			c->mapY--;
-
-			charaY = (c->mapY + c->height) / MAP_DIV_HEIGHT;
-		}
-
-	}
-	return;
 }
 
 BOOL MY_CHECK_RECT_COLL(RECT a, RECT b)
