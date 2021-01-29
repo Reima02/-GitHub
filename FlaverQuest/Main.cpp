@@ -101,6 +101,7 @@ VOID MY_CHECK_DOWN(int, int);		//当たり判定（下）
 VOID MY_CHECK_RIGHT(int, int);		//当たり判定（右）
 VOID MY_CHECK_LEFT(int, int);		//当たり判定（左）
 VOID MY_CHECK_TOP(int, int);		//当たり判定（上）
+VOID MY_CHECK_MAP(int, int);		//当たり判定（プレイヤー周辺）
 
 //重力を下に動かす
 VOID MY_MAP_DOWN(VOID);
@@ -224,14 +225,16 @@ int MapNoneID = 264;
 int MapKanbanID = 257;
 
 //マップ動かす
-BOOL isMapMove = TRUE;	//横移動可能なとき
-BOOL isMapDown = TRUE;	//重力で落ちていくかどうか
-int mapYokoKijun;
-int mapYokoLoopStart;
-int mapYokoLoopEnd;
-
+BOOL isMoveMapYoko = FALSE;	//横移動可能なとき
+BOOL isDownMap = TRUE;	//重力で落ちていくかどうか
 BOOL isMoveMapLeft = TRUE;
 BOOL isMoveMapRight = TRUE;
+
+//プレイヤーを動かす
+BOOL isMovePlayer = TRUE;
+BOOL isMovePlayerRight = TRUE;
+BOOL isMovePlayerLeft = TRUE;
+
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -512,14 +515,27 @@ VOID MY_PLAY_DRAW(VOID)
 	//メイン部分
 	else 
 	{
-		//マップを動かせるとき
-		if (isMapMove == TRUE)
+		//当たり判定処理
+		for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
 		{
+			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
+			{
+				MY_CHECK_MAP(tate, yoko);	//キャラクター：マップ　（キャラクター周辺）
+				MY_CHECK_TOP(tate, yoko);	//キャラクター：マップ　（上）
+				MY_CHECK_DOWN(tate, yoko);	//キャラクター：マップ　（下）
+				MY_CHECK_RIGHT(tate, yoko);	//キャラクター：マップ　（右）
+				MY_CHECK_LEFT(tate, yoko);	//キャラクター：マップ　（左）
+			}
+		}
+
+		if (isMoveMapYoko)
+		{
+
 			//左入力
-			if (MY_KEY_DOWN(KEY_INPUT_A) == TRUE)
+			if (MY_KEY_DOWN(KEY_INPUT_A))
 			{
 				//左に行けるとき
-				if (isMoveMapLeft == TRUE) {
+				if (isMoveMapLeft) {
 					for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
 					{
 						for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
@@ -538,10 +554,10 @@ VOID MY_PLAY_DRAW(VOID)
 			}
 
 			//右入力
-			if (MY_KEY_DOWN(KEY_INPUT_D) == TRUE)
+			if (MY_KEY_DOWN(KEY_INPUT_D))
 			{
 				//右に動かせるとき
-				if (isMoveMapRight == TRUE)
+				if (isMoveMapRight)
 				{
 					for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
 					{
@@ -561,95 +577,122 @@ VOID MY_PLAY_DRAW(VOID)
 				}
 			}
 
-			//当たり判定処理
-			for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
-			{
-				for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
-				{
-					MY_CHECK_DOWN(tate,yoko);	//キャラクター：マップ　（下）
-					MY_CHECK_RIGHT(tate,yoko);	//キャラクター：マップ　（右）
-					MY_CHECK_LEFT(tate, yoko);	//キャラクター：マップ　（左）
-				}
-			}
-
-			//TRUEの時マップを下に動かす
-			if (isMapDown)
-			{
-				MY_MAP_DOWN();
-			}
-
-			//MAP表示
-			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
-			{
-				for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
-				{
-					//空（下）
-					DrawGraph(
-						map_sora[tate][yoko].x,
-						map_sora[tate][yoko].y,
-						mapChip.handle[map_sora[tate][yoko].value],
-						TRUE);
-
-					//地面（中）
-					DrawGraph(
-						map_jimen[tate][yoko].x,
-						map_jimen[tate][yoko].y,
-						mapChip.handle[map_jimen[tate][yoko].value],
-						TRUE);
-					
-					//装飾(上)
-					DrawGraph(
-						map_sousyoku[tate][yoko].x,
-						map_sousyoku[tate][yoko].y,
-						mapChip.handle[map_sousyoku[tate][yoko].value],
-						TRUE);
-				}
-			}
-
-			//プレイヤー表示
-			DrawRotaGraph(
-				player.x,
-				player.y,
-				player.rate,
-				player.angle,
-				player.handle[player.nowImageKind],
-				TRUE
-			);
-
-			if (player.changeImageCnt < player.ChangeImageCntMax) {
-				++player.changeImageCnt;
-				player.nowImageKind = player.changeImageCnt;
-			}
-			else {
-				player.nowImageKind = player.keyState;
-				player.changeImageCnt = player.keyState;
-			}
-
-			//デバック用（当たり判定表示）
-			for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
-				for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
-					switch (map_jimen[tate][yoko].kind) {
-					case MAP_KIND_KABE:
-						DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 0, 255), FALSE);
-						break;
-
-					case MAP_KIND_TURO:
-						DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 255, 0), FALSE);
-						break;
-					}
-				}
-			}
-
-			DrawBoxRect(player.coll, GetColor(255, 0, 0), FALSE);
-			DrawBoxRect(player.collTop, GetColor(0, 0, 0), FALSE);
-			DrawBoxRect(player.collBottom, GetColor(255, 255, 0), FALSE);
-			DrawBoxRect(player.collLeft, GetColor(255, 0, 255), FALSE);
-			DrawBoxRect(player.collRight, GetColor(255, 255, 255), FALSE);
-
-
-			DrawString(0, 0, "メインゲーム", FONT_COLOR_WHITE);
 		}
-		return;
+
+		//キャラクターを端まで動かす
+		else if (isMovePlayer)
+		{
+			if (MY_KEY_DOWN(KEY_INPUT_A)) {
+				if (isMovePlayerLeft) {
+					//プレイヤーを移動する (左)
+					player.x -= player.speed;
+
+					//当たり判定移動
+					player.coll.left -= player.speed;
+					player.coll.right -= player.speed;
+				}
+			}
+
+			//右入力
+			if (MY_KEY_DOWN(KEY_INPUT_D))
+			{
+				if (isMovePlayerRight) {
+					//プレイヤーを移動する
+					player.x += player.speed;
+
+					//当たり判定移動
+					player.coll.left += player.speed;
+					player.coll.right += player.speed;
+				}
+			}
+
+			if (player.x == GAME_WIDTH / 2 - player.width / 2)
+			{
+				isMoveMapYoko = TRUE;
+				isMovePlayer = FALSE;
+			}
+		}
+
+		//TRUEの時マップを下に動かす
+		if (isDownMap)
+		{
+			MY_MAP_DOWN();
+		}
+
+		
+
+		//MAP表示
+		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
+		{
+			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++)
+			{
+				//空（下）
+				DrawGraph(
+					map_sora[tate][yoko].x,
+					map_sora[tate][yoko].y,
+					mapChip.handle[map_sora[tate][yoko].value],
+					TRUE);
+
+				//地面（中）
+				DrawGraph(
+					map_jimen[tate][yoko].x,
+					map_jimen[tate][yoko].y,
+					mapChip.handle[map_jimen[tate][yoko].value],
+					TRUE);
+
+				//装飾(上)
+				DrawGraph(
+					map_sousyoku[tate][yoko].x,
+					map_sousyoku[tate][yoko].y,
+					mapChip.handle[map_sousyoku[tate][yoko].value],
+					TRUE);
+			}
+		}
+
+		//プレイヤー表示
+		DrawRotaGraph(
+			player.x,
+			player.y,
+			player.rate,
+			player.angle,
+			player.handle[player.nowImageKind],
+			TRUE
+		);
+
+		if (player.changeImageCnt < player.ChangeImageCntMax) {
+			++player.changeImageCnt;
+			player.nowImageKind = player.changeImageCnt;
+		}
+		else {
+			player.nowImageKind = player.keyState;
+			player.changeImageCnt = player.keyState;
+		}
+
+		//デバック用（当たり判定表示）
+		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
+			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
+				switch (map_jimen[tate][yoko].kind) {
+				case MAP_KIND_KABE:
+					DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 0, 255), FALSE);
+					break;
+
+				case MAP_KIND_TURO:
+					DrawBoxRect(map_jimen[tate][yoko].coll, GetColor(0, 255, 0), FALSE);
+					break;
+				}
+			}
+		}
+
+		DrawBoxRect(player.coll, GetColor(255, 0, 0), FALSE);
+		DrawBoxRect(player.collTop, GetColor(0, 0, 0), FALSE);
+		DrawBoxRect(player.collBottom, GetColor(255, 255, 0), FALSE);
+		DrawBoxRect(player.collLeft, GetColor(255, 0, 255), FALSE);
+		DrawBoxRect(player.collRight, GetColor(255, 255, 255), FALSE);
+
+		DrawBox(GAME_WIDTH / 2 - player.width / 2 - 10, GAME_HEIGHT / 2 - player.height / 2 - 10, GAME_WIDTH / 2 - player.width / 2 + 10, GAME_HEIGHT / 2 - player.height / 2 + 10, GetColor(0, 0, 0), true);
+
+
+		DrawString(0, 0, "メインゲーム", FONT_COLOR_WHITE);
 	}
 }
 
@@ -673,6 +716,20 @@ VOID MY_MAP_DOWN(VOID)
 	}
 }
 
+//当たり判定（プレイヤー周辺）　引数：マップ配列の添え字
+VOID MY_CHECK_MAP(int tate, int yoko)
+{
+	//当たり判定下
+	if (MY_CHECK_RECT_COLL(player.coll, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
+	{
+		;
+	}
+	//着地してないとき重力を加える（マップを下に動かす）
+	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.coll, map_jimen[tate][yoko].coll) == TRUE) {
+		;
+	}
+}
+
 //当たり判定（下）　引数：マップ配列の添え字
 VOID MY_CHECK_DOWN(int tate, int yoko)
 {
@@ -680,11 +737,11 @@ VOID MY_CHECK_DOWN(int tate, int yoko)
 	if (MY_CHECK_RECT_COLL(player.collBottom, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
 	{
 		//着地判定がTRUEの時マップを動かさない
-		isMapDown = FALSE;
+		isDownMap = FALSE;
 	}
 	//着地してないとき重力を加える（マップを下に動かす）
 	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collBottom, map_jimen[tate][yoko].coll) == TRUE) {
-		isMapDown = TRUE;
+		isDownMap = TRUE;
 	}
 }
 
@@ -703,9 +760,11 @@ VOID MY_CHECK_RIGHT(int tate, int yoko)
 	if (MY_CHECK_RECT_COLL(player.collRight, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
 	{
 		isMoveMapRight = FALSE;
+		isMovePlayerRight = FALSE;
 	}
 	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collRight, map_jimen[tate][yoko].coll) == TRUE) {
 		isMoveMapRight = TRUE;
+		isMovePlayerRight = TRUE;
 	}
 }
 
@@ -715,9 +774,11 @@ VOID MY_CHECK_LEFT(int tate, int yoko)
 	if (MY_CHECK_RECT_COLL(player.collLeft, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
 	{
 		isMoveMapLeft = FALSE;
+		isMovePlayerLeft = FALSE;
 	}
 	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collLeft, map_jimen[tate][yoko].coll) == TRUE) {
 		isMoveMapLeft = TRUE;
+		isMovePlayerLeft = TRUE;
 	}
 }
 
@@ -927,7 +988,7 @@ BOOL MY_LOAD_IMAGE(VOID) {
 		return FALSE;
 	}
 
-	player.x = GAME_WIDTH / 2 - player.x / 2;
+	player.x = GAME_WIDTH / 4 - player.x / 2;
 	player.y = GAME_HEIGHT / 2 - player.y / 2;
 	player.speed = 1;
 	player.angle = 0;
