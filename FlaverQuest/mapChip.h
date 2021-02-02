@@ -8,7 +8,7 @@
 #define GAME_CSV_PATH_MAP1_JIMEN		TEXT(".\\MAP\\map_naka.csv")//地面
 #define GAME_CSV_PATH_MAP1_SOUSHOKU		TEXT(".\\MAP\\map_ue.csv")//装飾
 
-#define GAME_MAP_TATE_MAX		30	//マップ縦の広さ
+#define GAME_MAP_TATE_MAX		40	//マップ縦の広さ
 #define GAME_MAP_YOKO_MAX		100	//マップ横の広さ
 
 #define MAP_KABE_KIND 4
