@@ -54,6 +54,7 @@
 #define FONT_COLOR_BLACK	GetColor(0,0,0)			//色：黒
 #define FONT_COLOR_RED		GetColor(255,0,0)		//色：赤
 #define FONT_COLOR_WHITE	GetColor(255,255,255)	//色：白
+#define FONT_COLOR_BLUE		GetColor(0,0,255)		//色：青
 
 #define MAP_GAME_TATE	GAME_HEIGHT/MAP_DIV_HEIGHT
 #define MAP_GAME_YOKO	GAME_WIDTH/MAP_DIV_WIDTH
@@ -72,11 +73,20 @@ VOID MY_PLAY_DRAW(VOID);	//プレイ画面の描画
 VOID FIRST_FONT_DRAW(VOID);	//冒頭テキスト表示
 VOID OPERATING_DRAW(VOID);	//操作方法表示
 VOID PLAYER_SETTING(VOID);	//プレイヤー設定（PROC内）　モーション切り替えなど
+VOID MY_ITEM_TEXT_DRAW(VOID);	//アイテム選択テキスト表示
+VOID MY_PROCESS_GOAL(VOID);	//ゴールの処理
+VOID MY_MOVESET_DOWN_MAP(VOID);	//マップ下端
+VOID MY_MOVE_DOWN_BOTTOM_PLAYER(VOID);	//マップが下端に行ったときにプレイヤーを動かす
+VOID MY_TRANS_END(VOID);	//エンド画面への遷移
 
 //エンド画面
 VOID MY_END(VOID);			//エンド画面
 VOID MY_END_PROC(VOID);		//エンド画面の処理
 VOID MY_END_DRAW(VOID);		//エンド画面の描画
+VOID MY_END_TYPE(VOID);		//エンド画面種類
+VOID MY_CLEAR_PROC(VOID);	//クリア画面の処理
+VOID MY_OVER_PROC(VOID);	//ゲームオーバー画面の処理
+VOID MY_MISS_PROC(VOID);	//違うアイテムを持ってきたときの処理
 
 //キー入力処理
 VOID MY_ALL_KEYDOWN_UPDATE(VOID);	//キーの入力状態を更新する
@@ -107,6 +117,12 @@ VOID MY_CHECK_MAP(int, int);		//当たり判定（プレイヤー周辺）
 
 //重力を下に動かす
 VOID MY_MAP_DOWN(VOID);
+
+//プレイヤー移動
+VOID MY_MOVE_PLAYER(VOID);
+
+//アイテム取得
+VOID MY_SELECT_ITEM(VOID);
 
 //デバック用
 void DrawBoxRect(RECT, unsigned int, bool);
@@ -175,6 +191,15 @@ typedef struct STRUCT_MUSIC
 	int handle;					//ハンドル
 }MUSIC;
 
+//ゴールタイプ
+enum goalType
+{
+	Clear,
+	Miss,
+	Over,
+};
+goalType goal_type;
+
 //シーン
 int GameScene;
 
@@ -231,20 +256,30 @@ int MapKanbanID = 257;
 int mapInitY = 32*15;
 
 //マップ動かす
-BOOL isMoveMapYoko = FALSE;	//横移動可能なとき
+BOOL isMoveMapYoko = FALSE;	//左横移動可能なとき
+BOOL isMoveMapYoko2 = TRUE;	//右移動可能なとき
 BOOL isDownMap = TRUE;	//重力で落ちていくかどうか
-BOOL isMoveMapLeft = TRUE;
-BOOL isMoveMapRight = TRUE;
-BOOL isJump = FALSE;
-BOOL isJumpNow = FALSE;
-int jumpCnt = 0;
-int jumpCntMax = 64;
-float jumpSpeed = 1;
+BOOL isMoveMapLeft = TRUE;	//マップ左移動
+BOOL isMoveMapRight = TRUE;	//マップ右移動
+BOOL isJump = FALSE;		//ジャンプ可能かどうか
+BOOL isJumpNow = FALSE;		//ジャンプ中かどうか
+int jumpCnt = 0;			//滞空時間を数えるためのＣｏｕｎｔ
+int jumpCntMax = 50;		//滞空時間の最大時間
+int jumpSpeed = 2;		//ジャンプのスピード
+BOOL isNotMapDown = FALSE;	//マップを下に動かすかどうか	T:止める	F:動かす
 
 //プレイヤーを動かす
-BOOL isMovePlayer = TRUE;
+BOOL isMovePlayerX = TRUE;
 BOOL isMovePlayerRight = TRUE;
 BOOL isMovePlayerLeft = TRUE;
+
+//プレイヤーと看板
+BOOL isSelectKanban = FALSE;	//アイテム選択看板に触れているか	T:触れている　F:触れていない
+BOOL isCheckItem = TRUE;		//アイテムを選択画面で選択したか	T:アイテムを選択した	F:選択しない
+
+//プレイヤーとギルド
+BOOL isCheckGoal = FALSE;
+
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
@@ -343,7 +378,8 @@ VOID MY_START_PROC(VOID)
 	if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
 	{
 		//BGM停止
-		if (CheckSoundMem(musicStart.handle) != 0) {
+		if (CheckSoundMem(musicStart.handle) != 0) 
+		{
 			StopSoundMem(musicStart.handle);
 		}
 		MY_PLAY_INIT();	//プレイ画面初期化
@@ -351,53 +387,6 @@ VOID MY_START_PROC(VOID)
 	}
 
 	return;
-}
-
-//プレイ画面初期化
-VOID MY_PLAY_INIT()
-{
-	//プレイヤーを初期位置に戻す
-	player.x = GAME_WIDTH / 4 - player.width / 2;
-	player.changeImageCnt = PLAYER_RIGHT_STAY;
-	player.ChangeImageCntMax = PLAYER_RIGHT_STAY;
-
-	//マップを初期位置に戻す
-	MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_SORA, &map_sora[0][0], &mapInit_sora[0][0]);
-	MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_JIMEN, &map_jimen[0][0], &mapInit_jimen[0][0]);
-	MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_SOUSHOKU, &map_sousyoku[0][0], &mapInit_sousyoku[0][0]);
-
-	//マップを動かすかのトリガーの初期化
-	isMoveMapYoko = FALSE;	//横移動可能なとき
-	isDownMap = TRUE;	//重力で落ちていくかどうか
-	isMoveMapLeft = TRUE;
-	isMoveMapRight = TRUE;
-
-	for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
-	{
-		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
-		{
-			//マップ移動
-			map_sora[tate][yoko].y -= mapInitY;
-			map_jimen[tate][yoko].y-= mapInitY;
-			map_sousyoku[tate][yoko].y -= mapInitY;
-
-			//当たり判定移動
-			map_jimen[tate][yoko].coll.top -= mapInitY;
-			map_jimen[tate][yoko].coll.bottom -= mapInitY;
-		}
-	}
-
-	//プレイヤーを動かすトリガーの初期化
-	isMovePlayer = TRUE;
-	isMovePlayerRight = TRUE;
-	isMovePlayerLeft = TRUE;
-
-	//冒頭テキストをはじめから
-	fontNum = 1;
-
-	//テキストから始めるようにする
-	inGameMain = FALSE;
-
 }
 
 //スタート画面の描画
@@ -428,6 +417,64 @@ VOID MY_START_DRAW(VOID)
 	DrawString(0, 0, "スタート画面", GetColor(255, 255, 255));
 
 	return;
+}
+
+//プレイ画面初期化
+VOID MY_PLAY_INIT()
+{
+	//プレイヤーを初期位置に戻す
+	player.x = GAME_WIDTH / 10;
+	player.y = GAME_HEIGHT / 2;
+	player.changeImageCnt = PLAYER_RIGHT_STAY;
+	player.ChangeImageCntMax = PLAYER_RIGHT_STAY;
+
+	//マップを初期位置に戻す
+	MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_SORA, &map_sora[0][0], &mapInit_sora[0][0]);
+	MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_JIMEN, &map_jimen[0][0], &mapInit_jimen[0][0]);
+	MY_LOAD_CSV_MAP(GAME_CSV_PATH_MAP1_SOUSHOKU, &map_sousyoku[0][0], &mapInit_sousyoku[0][0]);
+
+
+	//マップを動かすかのトリガーの初期化
+	isMoveMapYoko = FALSE;	//横移動可能なとき
+	isDownMap = TRUE;	//重力で落ちていくかどうか
+	isMoveMapLeft = TRUE;
+	isMoveMapRight = TRUE;
+
+	//マップＹ軸調整 -mapInitだけ移動させた状態でスタートする
+	for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
+	{
+		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
+		{
+			//マップ移動
+			map_sora[tate][yoko].y -= mapInitY;
+			map_jimen[tate][yoko].y -= mapInitY;
+			map_sousyoku[tate][yoko].y -= mapInitY;
+
+			//当たり判定移動
+			map_jimen[tate][yoko].coll.top -= mapInitY;
+			map_jimen[tate][yoko].coll.bottom -= mapInitY;
+		}
+	}
+
+	//プレイヤーを動かすトリガーの初期化
+	isMovePlayerRight = TRUE;
+	isMovePlayerLeft = TRUE;
+	isNotMapDown = FALSE;
+
+	//冒頭テキストをはじめから
+	fontNum = 1;
+
+	//テキストから始めるようにする
+	inGameMain = FALSE;
+
+	//ゴールにあたっているかを判定
+	isCheckGoal = FALSE;
+
+	isSelectKanban = FALSE;	//アイテム選択看板に触れているか	T:触れている　F:触れていない
+	isCheckItem = TRUE;		//アイテムを選択画面で選択したか	T:アイテムを選択した	F:選択しない
+
+	//ゴールの判定をもどす
+	goal_type = Over;
 }
 
 /*----------プレイ画面----------*/
@@ -465,8 +512,6 @@ VOID MY_PLAY_PROC(VOID)
 			PlaySoundMem(musicPlay.handle, DX_PLAYTYPE_LOOP);			//再生
 		}
 
-		//プレイヤー設定
-		PLAYER_SETTING();
 
 		//当たり判定(計算)
 		//全体
@@ -484,7 +529,7 @@ VOID MY_PLAY_PROC(VOID)
 		//プレイヤー下
 		player.collBottom.left = player.x - player.width / 2 + 5;
 		player.collBottom.top = player.y + player.height / 2;
-		player.collBottom.right = player.collBottom.left + player.width - 10;
+		player.collBottom.right = player.collBottom.left + player.width / 2;
 		player.collBottom.bottom = player.collBottom.top + player.height / 2;
 
 		//プレイヤー右（頭）
@@ -511,7 +556,28 @@ VOID MY_PLAY_PROC(VOID)
 		player.collLeftBody.right = player.collLeftBody.left + player.width / 2;
 		player.collLeftBody.bottom = player.collLeftBody.top + player.height - 5;
 
-		//スペースキーを押したら、エンドシーンへ移動する
+		//プレイヤー移動準備関数
+		if (isSelectKanban && isCheckItem)
+		{
+			MY_SELECT_ITEM();	//アイテム選択　１：正解　２：不正解
+		}
+
+		else
+		{
+			//プレイヤー設定
+			PLAYER_SETTING();
+
+			//プレイヤーを動かす
+			MY_MOVE_PLAYER();
+
+			//マップが一番下に入った
+			MY_MOVESET_DOWN_MAP();
+		}
+
+		//ゴールの処理
+		MY_PROCESS_GOAL();
+
+		//デバック用　： スペースキーを押したら、エンドシーンへ移動する
 		//if (MY_KEY_DOWN(KEY_INPUT_SPACE) == TRUE)
 		//{
 		//	//BGM停止
@@ -525,6 +591,148 @@ VOID MY_PLAY_PROC(VOID)
 	}
 
 	return;
+}
+
+//マップ下まで行った時の処理
+VOID MY_MOVESET_DOWN_MAP(VOID)
+{
+	if (map_jimen[GAME_MAP_TATE_MAX - 1] -> y <= GAME_HEIGHT)
+	{
+		DrawBox(10, 10, 20, 20, GetColor(0, 255, 255), TRUE);
+		isNotMapDown = TRUE;
+	}
+
+	if (isNotMapDown)
+	{
+		MY_MOVE_DOWN_BOTTOM_PLAYER();
+	}
+}
+
+//落下したとき画面下端までプレイヤーを移動する
+VOID MY_MOVE_DOWN_BOTTOM_PLAYER()
+{
+	player.y += player.speed;
+	//落下したときゲームオーバーへ
+	if (player.y >= GAME_HEIGHT)
+	{
+		goal_type = Over;
+		MY_TRANS_END();
+	}
+}
+
+
+//ゴールの処理をする関数
+VOID MY_PROCESS_GOAL(VOID)
+{
+	if (isCheckGoal)
+	{
+		MY_TRANS_END();
+	}
+}
+
+VOID MY_TRANS_END(VOID)
+{
+	//BGM停止
+	if (CheckSoundMem(musicPlay.handle) != 0) {
+		StopSoundMem(musicPlay.handle);
+	}
+
+	//エンド画面へ遷移
+	GameScene = GAME_SCENE_END;
+}
+
+//アイテムを選択する関数
+VOID MY_SELECT_ITEM(VOID)
+{
+	if (MY_KEY_DOWN(KEY_INPUT_1))
+	{
+		isSelectKanban = FALSE;
+		isCheckItem = FALSE;
+		goal_type = Clear;
+	}
+
+	else if (MY_KEY_DOWN(KEY_INPUT_2))
+	{
+		isSelectKanban = FALSE;
+		isCheckItem = FALSE;
+		goal_type = Miss;
+	}
+}
+
+//当たり判定（プレイヤー周辺）　引数：マップ配列の添え字
+VOID MY_CHECK_MAP(int tate, int yoko)
+{
+	//当たり判定　プレイヤー：看板
+	if (MY_CHECK_RECT_COLL(player.coll, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KANBAN)
+	{
+		isSelectKanban = TRUE;
+	}
+
+	//当たり判定　プレイヤー：ギルド
+	if (MY_CHECK_RECT_COLL(player.coll, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_GUILD)
+	{
+		isCheckGoal = TRUE;
+	}
+}
+
+//当たり判定（下）　引数：マップ配列の添え字
+VOID MY_CHECK_DOWN(int tate, int yoko)
+{
+	//当たり判定下
+	if (MY_CHECK_RECT_COLL(player.collBottom, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
+	{
+		//着地判定がTRUEの時マップを動かさない
+		isDownMap = FALSE;
+		isJump = TRUE;
+		jumpCnt = 0;
+	}
+	//着地してないとき重力を加える（マップを下に動かす）
+	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collBottom, map_jimen[tate][yoko].coll) == TRUE) {
+		isDownMap = TRUE;
+		isJump = FALSE;
+	}
+}
+
+//当たり判定（上）　引数：マップ配列の添え字
+VOID MY_CHECK_TOP(int tate, int yoko)
+{
+	if (MY_CHECK_RECT_COLL(player.collTop, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
+	{
+		isJump = FALSE;
+		isJumpNow = FALSE;
+	}
+}
+
+//当たり判定（右）　引数：マップ配列の添え字
+VOID MY_CHECK_RIGHT(int tate, int yoko)
+{
+	if (MY_CHECK_RECT_COLL(player.collRightHead, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE
+		|| MY_CHECK_RECT_COLL(player.collRightBody, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE
+		)
+	{
+		isMoveMapRight = FALSE;
+		isMovePlayerRight = FALSE;
+	}
+	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collRightHead, map_jimen[tate][yoko].coll) == TRUE) {
+		isMoveMapRight = TRUE;
+		isMovePlayerRight = TRUE;
+	}
+}
+
+//当たり判定（左）　引数：マップ配列の添え字
+VOID MY_CHECK_LEFT(int tate, int yoko)
+{
+	if (MY_CHECK_RECT_COLL(player.collLeftHead, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE
+		|| MY_CHECK_RECT_COLL(player.collLeftBody, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE
+		)
+	{
+		isMoveMapLeft = FALSE;
+		isMovePlayerLeft = FALSE;
+	}
+	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collLeftHead, map_jimen[tate][yoko].coll) == TRUE) {
+		isMoveMapLeft = TRUE;
+		isMovePlayerLeft = TRUE;
+	}
 }
 
 /*----------プレイヤー設定----------*/
@@ -575,89 +783,91 @@ VOID PLAYER_SETTING()
 	}
 }
 
-
-//プレイ画面の描画
-VOID MY_PLAY_DRAW(VOID)
+//プレイヤー移動準備
+VOID MY_MOVE_PLAYER(VOID)
 {
-	//冒頭部分
-	if (!inGameMain) {
-		FIRST_FONT_DRAW();		//関数：冒頭テキスト表示
+	//当たり判定処理
+	for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
+	{
+		for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
+		{
+			MY_CHECK_MAP(tate, yoko);	//キャラクター：マップ　（キャラクター周辺）
+			MY_CHECK_TOP(tate, yoko);	//キャラクター：マップ　（上）
+			MY_CHECK_DOWN(tate, yoko);	//キャラクター：マップ　（下）
+			MY_CHECK_RIGHT(tate, yoko);	//キャラクター：マップ　（右）
+			MY_CHECK_LEFT(tate, yoko);	//キャラクター：マップ　（左）
+		}
 	}
 
-	//メイン部分
-	else 
+	if (isMoveMapYoko && isMoveMapYoko2)
 	{
-		//当たり判定処理
-		for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
+		//左入力
+		if (MY_KEY_DOWN(KEY_INPUT_A))
 		{
-			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
-			{
-				MY_CHECK_MAP(tate, yoko);	//キャラクター：マップ　（キャラクター周辺）
-				MY_CHECK_TOP(tate, yoko);	//キャラクター：マップ　（上）
-				MY_CHECK_DOWN(tate, yoko);	//キャラクター：マップ　（下）
-				MY_CHECK_RIGHT(tate, yoko);	//キャラクター：マップ　（右）
-				MY_CHECK_LEFT(tate, yoko);	//キャラクター：マップ　（左）
+			//左に行けるとき
+			if (isMoveMapLeft) {
+				for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
+				{
+					for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
+					{
+						//マップ移動
+						map_sora[tate][yoko].x += player.speed;
+						map_jimen[tate][yoko].x += player.speed;
+						map_sousyoku[tate][yoko].x += player.speed;
+
+						//当たり判定移動
+						map_jimen[tate][yoko].coll.left += player.speed;
+						map_jimen[tate][yoko].coll.right += player.speed;
+					}
+				}
 			}
 		}
 
-		if (isMoveMapYoko)
+		//右入力
+		if (MY_KEY_DOWN(KEY_INPUT_D))
 		{
+			//右に動かせるとき
+			if (isMoveMapRight)
+			{
+				for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
+				{
+					for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
+					{
+						//マップ移動
+						map_sora[tate][yoko].x -= player.speed;
+						map_jimen[tate][yoko].x -= player.speed;
+						map_sousyoku[tate][yoko].x -= player.speed;
 
-			//左入力
+						//当たり判定移動
+						map_jimen[tate][yoko].coll.left -= player.speed;
+						map_jimen[tate][yoko].coll.right -= player.speed;
+					}
+				}
+			}
+		}	
+		//画面端にいったらキャラクターが動くように切り替える
+		if (map_jimen[0]->x >= 0)
+		{
+			isMoveMapYoko = FALSE;
+		}
+
+		if (map_jimen[0][GAME_MAP_YOKO_MAX - 1].x <= GAME_WIDTH - player.width )
+		{
+			isMoveMapYoko2 = FALSE;
+		}
+	}
+
+
+
+	//キャラクターを端まで動かす
+	else
+	{
+		if (player.x >= player.width)	//画面端までいったら左に行くことを止める
+		{
 			if (MY_KEY_DOWN(KEY_INPUT_A))
 			{
-				//左に行けるとき
-				if (isMoveMapLeft) {
-					for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
-					{
-						for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
-						{
-							//マップ移動
-							map_sora[tate][yoko].x += player.speed;
-							map_jimen[tate][yoko].x += player.speed;
-							map_sousyoku[tate][yoko].x += player.speed;
-
-							//当たり判定移動
-							map_jimen[tate][yoko].coll.left += player.speed;
-							map_jimen[tate][yoko].coll.right += player.speed;
-						}
-					}
-				}
-			}
-
-			//右入力
-			if (MY_KEY_DOWN(KEY_INPUT_D))
-			{
-				//右に動かせるとき
-				if (isMoveMapRight)
+				if (isMovePlayerLeft)
 				{
-					for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
-					{
-						for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
-						{
-							//マップ移動
-							map_sora[tate][yoko].x -= player.speed;
-							map_jimen[tate][yoko].x -= player.speed;
-							map_sousyoku[tate][yoko].x -= player.speed;
-
-							//当たり判定移動
-							map_jimen[tate][yoko].coll.left -= player.speed;
-							map_jimen[tate][yoko].coll.right -= player.speed;
-						}
-					}
-
-				}
-			}
-
-
-
-		}
-
-		//キャラクターを端まで動かす
-		else if (isMovePlayer)
-		{
-			if (MY_KEY_DOWN(KEY_INPUT_A)) {
-				if (isMovePlayerLeft) {
 					//プレイヤーを移動する (左)
 					player.x -= player.speed;
 
@@ -666,7 +876,10 @@ VOID MY_PLAY_DRAW(VOID)
 					player.coll.right -= player.speed;
 				}
 			}
+		}
 
+		if (player.x <= GAME_WIDTH - player.width)	//画面端までいったら右に行くことを止める
+		{
 			//右入力
 			if (MY_KEY_DOWN(KEY_INPUT_D))
 			{
@@ -679,62 +892,76 @@ VOID MY_PLAY_DRAW(VOID)
 					player.coll.right += player.speed;
 				}
 			}
+		}
 
-			if (player.x == GAME_WIDTH / 2 - player.width / 2)
+		if (player.x == GAME_WIDTH / 2 - player.width / 2)
+		{
+			isMoveMapYoko = TRUE;
+			isMoveMapYoko2 = TRUE;
+		}
+
+	}
+
+	//ジャンプ処理
+	if (MY_KEY_DOWN(KEY_INPUT_SPACE))
+	{
+		if (isJump || isJumpNow) {
+			isJumpNow = TRUE;
+			jumpCnt++;
+			for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
 			{
-				isMoveMapYoko = TRUE;
-				isMovePlayer = FALSE;
-			}
-		}
-
-		//ジャンプ処理
-		if (MY_KEY_DOWN(KEY_INPUT_SPACE))
-		{
-			if (isJump || isJumpNow) {
-				isJumpNow = TRUE;
-				jumpCnt++;
-				for (int tate = 0; tate < GAME_MAP_TATE_MAX; ++tate)
+				for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
 				{
-					for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; ++yoko)
-					{
-						//マップ移動
-						map_sora[tate][yoko].y += jumpSpeed;
-						map_jimen[tate][yoko].y += jumpSpeed;
-						map_sousyoku[tate][yoko].y += jumpSpeed;
+					//マップ移動
+					map_sora[tate][yoko].y += jumpSpeed;
+					map_jimen[tate][yoko].y += jumpSpeed;
+					map_sousyoku[tate][yoko].y += jumpSpeed;
 
-						//当たり判定移動
-						map_jimen[tate][yoko].coll.top += jumpSpeed;
-						map_jimen[tate][yoko].coll.bottom += jumpSpeed;
-					}
-				}
-
-				if (jumpCnt >= jumpCntMax)
-				{
-					isJump = FALSE;
-					isJumpNow = FALSE;
+					//当たり判定移動
+					map_jimen[tate][yoko].coll.top += jumpSpeed;
+					map_jimen[tate][yoko].coll.bottom += jumpSpeed;
 				}
 			}
-		}
 
-		else if (MY_KEY_UP(KEY_INPUT_SPACE))
-		{
-			isJump = FALSE;
-			isJumpNow = FALSE;
+			if (jumpCnt >= jumpCntMax)
+			{
+				isJump = FALSE;
+				isJumpNow = FALSE;
+			}
 		}
-	
-		if (isJumpNow)
-		{
-			isDownMap = FALSE;
-		}
+	}
 
-		//TRUEの時マップを下に動かす
-		if (isDownMap)
-		{
-			MY_MAP_DOWN();
-		}
+	else if (MY_KEY_UP(KEY_INPUT_SPACE))
+	{
+		isJump = FALSE;
+		isJumpNow = FALSE;
+	}
 
-		
+	if (isJumpNow)
+	{
+		isDownMap = FALSE;
+	}
 
+	//TRUEの時マップを下に動かす
+	if (isDownMap && !isNotMapDown)
+	{
+		MY_MAP_DOWN();
+	}
+}
+
+
+
+//プレイ画面の描画
+VOID MY_PLAY_DRAW(VOID)
+{
+	//冒頭部分
+	if (!inGameMain) {
+		FIRST_FONT_DRAW();		//関数：冒頭テキスト表示
+	}
+
+	//メイン部分
+	else 
+	{
 		//MAP表示
 		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++)
 		{
@@ -782,6 +1009,12 @@ VOID MY_PLAY_DRAW(VOID)
 			player.changeImageCnt = player.keyState;
 		}
 
+		//アイテム選択
+		if (isSelectKanban && isCheckItem)
+		{
+			MY_ITEM_TEXT_DRAW();
+		}
+
 		//デバック用（当たり判定表示）
 		for (int tate = 0; tate < GAME_MAP_TATE_MAX; tate++) {
 			for (int yoko = 0; yoko < GAME_MAP_YOKO_MAX; yoko++) {
@@ -806,9 +1039,8 @@ VOID MY_PLAY_DRAW(VOID)
 		DrawBoxRect(player.collLeftBody, GetColor(255, 255, 255), FALSE);
 		DrawBoxRect(player.collRightBody, GetColor(255, 0, 255), FALSE);
 
-		if(isMoveMapLeft)
-		DrawBox(GAME_WIDTH / 2 - player.width / 2 - 10, GAME_HEIGHT / 2 - player.height / 2 - 10, GAME_WIDTH / 2 - player.width / 2 + 10, GAME_HEIGHT / 2 - player.height / 2 + 10, GetColor(0, 0, 0), true);
-
+		if(!isMoveMapYoko2)
+			DrawBox(GAME_WIDTH / 2 - player.width / 2 - 10, GAME_HEIGHT / 2 - player.height / 2 - 10, GAME_WIDTH / 2 - player.width / 2 + 10, GAME_HEIGHT / 2 - player.height / 2 + 10, GetColor(255, 0, 0), true);
 
 		DrawString(0, 0, "メインゲーム", FONT_COLOR_WHITE);
 	}
@@ -834,108 +1066,66 @@ VOID MY_MAP_DOWN(VOID)
 	}
 }
 
-//当たり判定（プレイヤー周辺）　引数：マップ配列の添え字
-VOID MY_CHECK_MAP(int tate, int yoko)
-{
-	//当たり判定下
-	if (MY_CHECK_RECT_COLL(player.coll, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
-	{
-		;
-	}
-	//着地してないとき重力を加える（マップを下に動かす）
-	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.coll, map_jimen[tate][yoko].coll) == TRUE) {
-		;
-	}
-}
 
-//当たり判定（下）　引数：マップ配列の添え字
-VOID MY_CHECK_DOWN(int tate, int yoko)
-{
-	//当たり判定下
-	if (MY_CHECK_RECT_COLL(player.collBottom, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
-	{
-		//着地判定がTRUEの時マップを動かさない
-		isDownMap = FALSE;
-		isJump = TRUE;
-		jumpCnt = 0;
-	}
-	//着地してないとき重力を加える（マップを下に動かす）
-	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collBottom, map_jimen[tate][yoko].coll) == TRUE) {
-		isDownMap = TRUE;
-		isJump = FALSE;
-	}
-}
-
-//当たり判定（上）　引数：マップ配列の添え字
-VOID MY_CHECK_TOP(int tate, int yoko)
-{
-	if (MY_CHECK_RECT_COLL(player.collTop, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE)
-	{
-		isJump = FALSE;
-		isJumpNow = FALSE;
-	}
-}
-
-//当たり判定（右）　引数：マップ配列の添え字
-VOID MY_CHECK_RIGHT(int tate, int yoko)
-{
-	if (MY_CHECK_RECT_COLL(player.collRightHead, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE 
-		|| MY_CHECK_RECT_COLL(player.collRightBody, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE
-	)
-	{
-		isMoveMapRight = FALSE;
-		isMovePlayerRight = FALSE;
-	}
-	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collRightHead, map_jimen[tate][yoko].coll) == TRUE) {
-		isMoveMapRight = TRUE;
-		isMovePlayerRight = TRUE;
-	}
-}
-
-//当たり判定（左）　引数：マップ配列の添え字
-VOID MY_CHECK_LEFT(int tate, int yoko)
-{
-	if (MY_CHECK_RECT_COLL(player.collLeftHead, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE
-		|| MY_CHECK_RECT_COLL(player.collLeftBody, map_jimen[tate][yoko].coll) == TRUE && map_jimen[tate][yoko].kind == MAP_KIND_KABE
-		)
-	{
-		isMoveMapLeft = FALSE;
-		isMovePlayerLeft = FALSE;
-	}
-	else if (map_jimen[tate][yoko].kind != MAP_KABE_KIND && MY_CHECK_RECT_COLL(player.collLeftHead, map_jimen[tate][yoko].coll) == TRUE) {
-		isMoveMapLeft = TRUE;
-		isMovePlayerLeft = TRUE;
-	}
-}
 
 /*----------エンド画面----------*/
 VOID MY_END(VOID)
 {
 	MY_END_PROC();	//エンド画面の処理
 	MY_END_DRAW();	//エンド画面の描画
-	return;
 }
 
 //エンド画面の処理
 VOID MY_END_PROC(VOID)
 {
+	//ゴールを判断する
+	switch (goal_type)
+	{
+	case Clear:
+		MY_CLEAR_PROC();
+		break;
+	case Over:
+		MY_OVER_PROC();
+		break;
+	case Miss:
+		MY_MISS_PROC();
+		break;
+	default:
+		break;
+	}
+
 	//エスケープキーを押したら、スタートシーンへ移動する
 	if (MY_KEY_DOWN(KEY_INPUT_ESCAPE) == TRUE)
 	{
 		GameScene = GAME_SCENE_START;
 	}
+}
 
-	return;
+//ゲームクリア画面処理
+VOID MY_CLEAR_PROC()
+{
+	DrawString(GAME_WIDTH / 2, GAME_HEIGHT / 2, "クリア", FONT_COLOR_WHITE, TRUE);
+}
+
+//ゲームオーバー画面処理
+VOID MY_OVER_PROC()
+{
+	DrawString(GAME_WIDTH / 2, GAME_HEIGHT / 2, "ゲームオーバー", FONT_COLOR_WHITE, TRUE);
+}
+
+//違うアイテムを持ってきたときの処理
+VOID MY_MISS_PROC()
+{
+	DrawString(GAME_WIDTH / 2, GAME_HEIGHT / 2, "アイテムが違います", FONT_COLOR_WHITE, TRUE);
 }
 
 //エンド画面の描画
 VOID MY_END_DRAW(VOID)
 {
 	//青の四角を描画
-	DrawBox(10, 10, GAME_WIDTH - 10, GAME_HEIGHT - 10, GetColor(0, 0, 255), TRUE);
+	//DrawBox(10, 10, GAME_WIDTH - 10, GAME_HEIGHT - 10, GetColor(0, 0, 255), TRUE);
 
 	DrawString(0, 0, "エンド画面(エスケープキーを押して下さい)", GetColor(255, 255, 255));
-	return;
 }
 
 /*------------FPS----------*/
@@ -955,7 +1145,6 @@ VOID MY_FPS_UPDATE(VOID)
 		StartTimeFps = now;
 	}
 	CountFps++;
-	return;
 }
 
 
@@ -963,7 +1152,6 @@ VOID MY_FPS_DRAW(VOID)
 {
 	//文字列を描画
 	DrawFormatString(0, GAME_HEIGHT - 20, GetColor(255, 255, 255), "FPS:%.1f", CalcFps);
-	return;
 }
 
 
@@ -976,7 +1164,6 @@ VOID MY_FPS_WAIT(VOID)
 	{
 		WaitTimer(waitTime);	//待つ
 	}
-	return;
 }
 
 /*------------------キー入力処理関数-----------------------------*/
@@ -1004,7 +1191,6 @@ VOID MY_ALL_KEYDOWN_UPDATE(VOID)
 			AllKeyState[i] = 0;	//押されていない
 		}
 	}
-	return;
 }
 
 //キーを押しているか、キーコードで判断する
@@ -1210,6 +1396,22 @@ VOID OPERATING_DRAW() {
 		ImageOperating.angle,
 		ImageOperating.image.handle,
 		TRUE);
+}
+
+/*-----------アイテム選択テキスト表示-----------------*/
+VOID MY_ITEM_TEXT_DRAW() {
+	//背景
+	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 128);
+	DrawBox(fontX - 10, fontY - 10, GAME_WIDTH / 2 + 400, GAME_HEIGHT / 2 + 150, GetColor(200, 200, 200), TRUE);
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
+	
+	SetFontSize(32);
+	DrawString(fontX, fontY, "あなたが思う正解のアイテムを選択してください！", FONT_COLOR_BLACK);
+
+	SetFontSize(40);
+	DrawString(GAME_WIDTH / 4, fontY + GAME_HEIGHT / 3, "1 →　スイカ", FONT_COLOR_RED);
+	DrawString(GAME_WIDTH / 2 + 64, fontY + GAME_HEIGHT / 3, "2 →　メロン", FONT_COLOR_BLUE);
+	
 }
 
 /*--------MAP---------*/
