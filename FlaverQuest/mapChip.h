@@ -11,7 +11,7 @@
 #define GAME_MAP_TATE_MAX		40	//マップ縦の広さ
 #define GAME_MAP_YOKO_MAX		100	//マップ横の広さ
 
-#define MAP_KABE_KIND 4
+#define MAP_JIMEN_KIND 4
 #define MAP_GUILD_KIND 4
 
 #define MAP_DIV_WIDTH			32
